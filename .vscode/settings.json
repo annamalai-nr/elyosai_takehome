@@ -8,22 +8,8 @@
     "python.condaPath": "/Users/annamalainarayanan/anaconda3/envs/elyosai/bin/conda",
     "terminal.integrated.env.osx": {
         "PATH": "/Users/annamalainarayanan/anaconda3/envs/elyosai/bin:${env:PATH}",
-        "PYTHONPATH": "${workspaceFolder}",
-        "CONDA_DEFAULT_ENV": "elyosai"
+        "PYTHONPATH": "${workspaceFolder}"
     },
-    // Force every new terminal to auto-activate the elyosai conda env.
-    // Defensive: if conda.sh or the env is missing, prints a hint instead
-    // of leaving the terminal in a broken state.
-    "terminal.integrated.profiles.osx": {
-        "elyosai (auto-activate)": {
-            "path": "/bin/zsh",
-            "args": [
-                "-l", "-i", "-c",
-                "source /Users/annamalainarayanan/anaconda3/etc/profile.d/conda.sh 2>/dev/null && conda activate elyosai 2>/dev/null && echo '✓ conda env: elyosai' || echo '⚠️  elyosai conda env not active — run: conda create -n elyosai python=3.12 -y'; exec /bin/zsh -i"
-            ]
-        }
-    },
-    "terminal.integrated.defaultProfile.osx": "elyosai (auto-activate)",
     "git.ignoreLimitWarning": true,
     "python.analysis.extraPaths": [
         "${workspaceFolder}",
