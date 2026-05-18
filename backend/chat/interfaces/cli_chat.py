@@ -1,8 +1,10 @@
 import asyncio
+import logging
 import signal
 
 import httpx
-import openai
+
+logging.getLogger("LiteLLM").setLevel(logging.ERROR)
 
 from backend.chat.core.engine import stream_turn
 from backend.chat.load_config import load_config
@@ -27,7 +29,6 @@ async def _async_main():
     print("Type 'quit' to exit.\n")
 
     async with httpx.AsyncClient() as http_client:
-        oai = openai.AsyncOpenAI()
         loop = asyncio.get_running_loop()
 
         while True:
@@ -48,7 +49,7 @@ async def _async_main():
             print("Assistant: ", end="", flush=True)
 
             state = {"partial": ""}
-            _turn_task = asyncio.create_task(stream_turn(oai, http_client, cfg, messages, state))
+            _turn_task = asyncio.create_task(stream_turn(http_client, cfg, messages, state))
             try:
                 await _turn_task
             except asyncio.CancelledError:

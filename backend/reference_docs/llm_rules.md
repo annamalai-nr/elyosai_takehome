@@ -51,10 +51,10 @@ programming session where real-time voice APIs come into scope.
 
 ## Take-home specific notes
 
-- For the **take-home CLI chat application** the recommendation is the
-  provider's official SDK directly (per the take-home PDF). Skip LiteLLM and
-  the helpers in `backend/llm_utils/litellm_kwargs.py` for the chat app — they
-  are kept available but optional.
+- The **take-home CLI chat application** (`backend/chat/`) uses the LiteLLM
+  Python SDK for text LLM calls, supporting OpenAI and Anthropic models.
+  Config lives at `backend/chat/config.yaml`; `drop_params=True` is used so
+  provider-unsupported params are silently dropped.
 - For the **on-site pair-programming session**, audio I/O is added via
   Deepgram (STT) and ElevenLabs (TTS). The native-SDK rules above apply.
 

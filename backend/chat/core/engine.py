@@ -4,7 +4,7 @@ import os
 from typing import Any
 
 import httpx
-import openai
+import litellm
 
 from backend.chat.core.parsers import envelope, normalise_weather, parse_research, truncate
 from backend.chat.prompts import TOOLS
@@ -70,16 +70,18 @@ async def execute_tool(client: httpx.AsyncClient, cfg: dict, name: str, args: di
 
 
 def _llm_kwargs(cfg: dict) -> dict[str, Any]:
-    """Build extra kwargs for the OpenAI completions call from config."""
+    """Build extra kwargs for the LiteLLM acompletion call from config."""
     llm = cfg["llm"]
-    kwargs: dict[str, Any] = {"max_completion_tokens": llm.get("max_tokens", 1500)}
-    if llm.get("reasoning_effort", "none") == "none":
-        kwargs["temperature"] = llm.get("temperature", 0.0)
+    kwargs: dict[str, Any] = {"max_tokens": llm.get("max_tokens", 1500)}
+    reasoning = llm.get("reasoning_effort", "none")
+    if reasoning and reasoning != "none":
+        kwargs["reasoning_effort"] = reasoning
+    if "temperature" in llm:
+        kwargs["temperature"] = llm["temperature"]
     return kwargs
 
 
 async def stream_turn(
-    oai: openai.AsyncOpenAI,
     client: httpx.AsyncClient,
     cfg: dict,
     messages: list[dict],
@@ -87,11 +89,12 @@ async def stream_turn(
     round_count: int = 0,
 ) -> None:
     """Stream one LLM turn, recursing if the model invokes tools."""
-    stream = await oai.chat.completions.create(
+    stream = await litellm.acompletion(
         model=cfg["llm"]["model_name"],
         messages=messages,
         tools=TOOLS,
         stream=True,
+        drop_params=True,
         **_llm_kwargs(cfg),
     )
     content_parts: list[str] = []
@@ -150,4 +153,4 @@ async def stream_turn(
     if round_count >= MAX_TOOL_ROUNDS:
         print("\n  [Max tool rounds reached]", flush=True)
         return
-    return await stream_turn(oai, client, cfg, messages, state, round_count)
+    return await stream_turn(client, cfg, messages, state, round_count)

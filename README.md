@@ -115,6 +115,10 @@ python -m backend.chat --validate   # fixture tests
 Config lives at `backend/chat/config.yaml`. Model name, API base URL, and
 other settings are there. The `.env` at the project root supplies API keys.
 
+LLM calls go through [LiteLLM](https://docs.litellm.ai/) (Python SDK, not
+proxy). OpenAI and Anthropic text models from `allowed_models.csv` are
+supported — set `llm.model_name` in the config to switch providers.
+
 ## Running the probes
 
 All probe scripts read `ELYOS_API_KEY` automatically from `.env` (at the
