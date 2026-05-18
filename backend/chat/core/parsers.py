@@ -69,8 +69,9 @@ def parse_research(data: dict) -> ResearchResult | dict:
         kind = "cached"
         raw_age = data.get("cache_age_seconds")
         if raw_age is not None:
-            kwargs["cache_age_seconds"] = int(raw_age)
-            kwargs["cache_age"] = _humanize_seconds(int(raw_age))
+            age = int(raw_age)
+            kwargs["cache_age_seconds"] = age
+            kwargs["cache_age"] = _humanize_seconds(age)
     if data.get("truncated"):
         kind = "truncated"
         kwargs["processed_topic"] = data.get("processed_topic", "")
