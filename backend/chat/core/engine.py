@@ -12,7 +12,7 @@ import litellm  # noqa: E402
 from langsmith import traceable
 
 from backend.chat.core.parsers import envelope, normalise_weather, parse_research, truncate
-from backend.chat.prompts import TOOLS
+from backend.chat.tools import TOOLS
 
 litellm.callbacks = ["langsmith"]
 

@@ -51,6 +51,8 @@ Before returning your final response, review your generated output against the u
 
 Use XML-style tagging or Markdown to structure prompts. This provides unambiguous boundaries that help the model distinguish between instructions and data. Don't mix XML or Markdown, choose one format for consistency.
 
+**This project uses XML tags.** All system prompts in this repo must use XML-style delimiters (e.g. `<role>`, `<constraints>`, `<examples>`), not Markdown headings.
+
 ### XML Example:
 
 ```xml
