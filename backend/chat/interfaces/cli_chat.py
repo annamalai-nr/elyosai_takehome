@@ -7,10 +7,12 @@ from backend.chat.core.engine import stream_turn
 from backend.chat.load_config import load_config
 from backend.chat.prompts import SYSTEM_PROMPT
 
-_turn_task = None
+_turn_task: asyncio.Task | None = None
+
+EXIT_COMMANDS: set[str] = {"quit", "exit", "q"}
 
 
-def _on_sigint():
+def _on_sigint() -> None:
     global _turn_task
     if _turn_task and not _turn_task.done():
         _turn_task.cancel()
@@ -18,10 +20,10 @@ def _on_sigint():
         raise KeyboardInterrupt
 
 
-async def _async_main():
+async def _async_main() -> None:
     global _turn_task
     cfg = load_config()
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    messages: list[dict] = [{"role": "system", "content": SYSTEM_PROMPT}]
     print(f"Elyos Chat (model: {cfg['llm']['model_name']})")
     print("Type 'quit' to exit.\n")
 
@@ -35,9 +37,11 @@ async def _async_main():
             except (EOFError, KeyboardInterrupt):
                 print()
                 break
-            if user_input.strip().lower() in ("quit", "exit", "q"):
+
+            stripped = user_input.strip()
+            if stripped.lower() in EXIT_COMMANDS:
                 break
-            if not user_input.strip():
+            if not stripped:
                 continue
 
             loop.add_signal_handler(signal.SIGINT, _on_sigint)
@@ -45,7 +49,7 @@ async def _async_main():
             messages.append({"role": "user", "content": user_input})
             print("Assistant: ", end="", flush=True)
 
-            state = {"partial": ""}
+            state: dict[str, str] = {"partial": ""}
             _turn_task = asyncio.create_task(stream_turn(http_client, cfg, messages, state))
             try:
                 await _turn_task
@@ -61,7 +65,7 @@ async def _async_main():
     print("Goodbye.")
 
 
-def main():
+def main() -> None:
     asyncio.run(_async_main())
 
 

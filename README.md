@@ -15,7 +15,6 @@ Builds a CLI streaming chat application that calls two real-world APIs
 ├── CLAUDE.md                          Claude Code specifics
 ├── pyproject.toml                     Hatch packaging + dependencies
 ├── requirements.txt                   pip dependencies (also covered by pyproject)
-├── chat.py                            root entry point (delegates to backend/chat)
 ├── .env                               ELYOS_API_KEY (gitignored)
 ├── .vscode/settings.json              Python interpreter + analysis settings
 ├── .claude/                           Claude Code permissions
@@ -102,14 +101,8 @@ cd /Users/annamalainarayanan/Desktop/personal/interview_prep/elyosai
 
 ```bash
 conda activate elyosai
-python chat.py              # interactive streaming chat
-python chat.py --validate   # run 9 parser/envelope fixture tests
-```
-
-Also works via package entry point:
-```bash
-python -m backend.chat              # interactive chat
-python -m backend.chat --validate   # fixture tests
+python -m backend.chat              # interactive streaming chat
+python -m backend.chat --validate   # run 9 parser/envelope fixture tests
 ```
 
 Config lives at `backend/chat/config.yaml`. Model name, API base URL, and

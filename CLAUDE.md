@@ -9,8 +9,8 @@
   missing assignment rules.
 - **Conda environment:** `elyosai` (Python 3.12).
 - **Chat app lives in `backend/chat/`.** Config at `backend/chat/config.yaml`,
-  entry point at `python chat.py` (root shim) or `python -m backend.chat`.
-  Validate with `python chat.py --validate`.
+  entry point: `python -m backend.chat`.
+  Validate with `python -m backend.chat --validate`.
 - **This is a CLI streaming chat take-home, not a voice product.** Target is
   150–250 LOC of focused code in the take-home's CLI shape; past 400 lines
   is over-engineering.

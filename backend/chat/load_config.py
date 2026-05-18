@@ -8,10 +8,16 @@ from dotenv import load_dotenv
 
 from backend.chat.paths import ALLOWED_MODELS_PATH, CONFIG_PATH, PROJECT_ROOT
 
-PROVIDER_ENV = {
+PROVIDER_ENV: dict[str, str] = {
     "openai": "OPENAI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
 }
+
+
+def _require_env(var_name: str) -> None:
+    """Exit with a clear message if an env var is missing."""
+    if not os.environ.get(var_name):
+        sys.exit(f"Missing env var: {var_name}")
 
 
 def load_config() -> dict[str, Any]:
@@ -19,24 +25,25 @@ def load_config() -> dict[str, Any]:
     load_dotenv(PROJECT_ROOT / ".env")
     with open(CONFIG_PATH) as f:
         cfg = yaml.safe_load(f)
-    model = cfg["llm"]["model_name"]
+
+    model: str = cfg["llm"]["model_name"]
     with open(ALLOWED_MODELS_PATH) as f:
-        rows = {row["model"]: row for row in csv.DictReader(f)}
-    if model not in rows:
+        allowed = {row["model"]: row for row in csv.DictReader(f)}
+
+    if model not in allowed:
         sys.exit(f"Model {model!r} is not in allowed_models.csv")
-    row = rows[model]
+
+    row = allowed[model]
     if row.get("type") != "text":
-        sys.exit(f"Model {model!r} is type={row.get('type')!r}, but backend.chat currently requires a text model")
+        sys.exit(f"Model {model!r} is type={row.get('type')!r}, but backend.chat requires a text model")
+
     provider = row.get("provider")
     if provider not in PROVIDER_ENV:
         sys.exit(
-            f"Model {model!r} is provider={provider!r}, but backend.chat currently supports only "
+            f"Model {model!r} is provider={provider!r}, but backend.chat supports only "
             f"OpenAI and Anthropic through LiteLLM"
         )
-    env_var = PROVIDER_ENV[provider]
-    if not os.environ.get(env_var):
-        sys.exit(f"Missing env var: {env_var}")
-    api_key_var = cfg["elyos_api"]["api_key_env"]
-    if not os.environ.get(api_key_var):
-        sys.exit(f"Missing env var: {api_key_var}")
+
+    _require_env(PROVIDER_ENV[provider])
+    _require_env(cfg["elyos_api"]["api_key_env"])
     return cfg
