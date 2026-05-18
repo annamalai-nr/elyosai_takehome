@@ -27,7 +27,10 @@ async def call_api(client, base_url, endpoint, params, api_key):
             return {"error": "http_error", "message": str(e)}
 
         if resp.status_code == 200:
-            data = resp.json()
+            try:
+                data = resp.json()
+            except Exception:
+                return {"error": "invalid_json", "message": f"{endpoint} returned non-JSON body"}
             if isinstance(data, dict) and data.get("status") == "throttled":
                 wait = data.get("retry_after_seconds", 30) + 1
                 if attempt < MAX_THROTTLE_RETRIES:
@@ -60,12 +63,21 @@ async def execute_tool(client, cfg, name, args):
     return envelope(name, {"error": "unknown_tool", "message": f"No tool named {name}"})
 
 
+def _llm_kwargs(cfg):
+    llm = cfg["llm"]
+    kwargs = {"max_completion_tokens": llm.get("max_tokens", 1500)}
+    if llm.get("reasoning_effort", "none") == "none":
+        kwargs["temperature"] = llm.get("temperature", 0.0)
+    return kwargs
+
+
 async def stream_turn(oai, client, cfg, messages, state, round_count=0):
     stream = await oai.chat.completions.create(
         model=cfg["llm"]["model_name"],
         messages=messages,
         tools=TOOLS,
         stream=True,
+        **_llm_kwargs(cfg),
     )
     content_parts = []
     tool_calls = {}
