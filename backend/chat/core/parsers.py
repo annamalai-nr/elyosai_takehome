@@ -1,14 +1,16 @@
 import json
+from typing import Any
 
 from pydantic import BaseModel
 
 from backend.chat.core.models import NormalisedWeather, ResearchResult, WeatherObservation
 
 
-def normalise_weather(data, requested_location):
+def normalise_weather(data: dict, requested_location: str) -> NormalisedWeather | dict:
+    """Parse raw weather API response into a NormalisedWeather or an error dict."""
     if "error" in data:
         return data
-    result_kwargs = {
+    result_kwargs: dict[str, Any] = {
         "requested_location": requested_location,
         "returned_location": data.get("location", requested_location),
     }
@@ -28,12 +30,13 @@ def normalise_weather(data, requested_location):
     return NormalisedWeather(**result_kwargs)
 
 
-def parse_research(data):
+def parse_research(data: dict) -> ResearchResult | dict:
+    """Parse raw research API response into a ResearchResult or an error dict."""
     if "error" in data:
         return data
     if not data:
         return ResearchResult(kind="timeout", message="Research timed out. Try a more specific topic or try again.")
-    result_kwargs = {
+    result_kwargs: dict[str, Any] = {
         "kind": "fresh",
         "topic": data.get("topic", ""),
         "summary": data.get("summary", ""),
@@ -50,15 +53,17 @@ def parse_research(data):
     return ResearchResult(**result_kwargs)
 
 
-def _cap(s, n=200):
-    return s if len(s) <= n else s[:n] + "..."
+def truncate(s: str, max_len: int = 200) -> str:
+    """Truncate a string to max_len, appending '...' if shortened."""
+    return s if len(s) <= max_len else s[:max_len] + "..."
 
 
-def envelope(tool_name, data):
+def envelope(tool_name: str, data: BaseModel | dict) -> str:
+    """Wrap tool output in a JSON envelope marking data as untrusted."""
     if isinstance(data, BaseModel):
         data = data.model_dump(exclude_none=True)
     if isinstance(data, dict):
-        for k in ("topic", "summary", "message"):
-            if k in data and isinstance(data[k], str):
-                data[k] = _cap(data[k])
+        for key in ("topic", "summary", "message"):
+            if key in data and isinstance(data[key], str):
+                data[key] = truncate(data[key])
     return json.dumps({"source": "elyos_api", "tool": tool_name, "untrusted": True, "data": data})

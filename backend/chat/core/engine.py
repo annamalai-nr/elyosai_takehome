@@ -1,17 +1,22 @@
 import asyncio
 import json
 import os
+from typing import Any
 
 import httpx
+import openai
 
-from backend.chat.core.parsers import _cap, envelope, normalise_weather, parse_research
+from backend.chat.core.parsers import envelope, normalise_weather, parse_research, truncate
 from backend.chat.prompts import TOOLS
 
 MAX_TOOL_ROUNDS = 5
 MAX_THROTTLE_RETRIES = 5
 
 
-async def call_api(client, base_url, endpoint, params, api_key):
+async def call_api(
+    client: httpx.AsyncClient, base_url: str, endpoint: str, params: dict, api_key: str
+) -> dict:
+    """GET an Elyos API endpoint with throttle-retry. Always returns a dict."""
     timeout = 20.0 if endpoint == "/research" else 15.0
     for attempt in range(MAX_THROTTLE_RETRIES + 1):
         try:
@@ -47,7 +52,8 @@ async def call_api(client, base_url, endpoint, params, api_key):
     return {"error": "throttle_exhausted", "message": "Rate limit retries exhausted"}
 
 
-async def execute_tool(client, cfg, name, args):
+async def execute_tool(client: httpx.AsyncClient, cfg: dict, name: str, args: dict) -> str:
+    """Call the Elyos API for a tool and return an envelope-wrapped JSON string."""
     base = cfg["elyos_api"]["base_url"]
     key = os.environ[cfg["elyos_api"]["api_key_env"]]
     if name == "get_weather":
@@ -55,7 +61,7 @@ async def execute_tool(client, cfg, name, args):
         print(f"\r  Looking up weather for {location}...", flush=True)
         data = await call_api(client, base, "/weather", {"location": location}, key)
         return envelope(name, normalise_weather(data, location))
-    elif name == "research_topic":
+    if name == "research_topic":
         topic = args.get("topic", "")
         print(f"\r  Researching {topic}... (Ctrl+C to cancel)", flush=True)
         data = await call_api(client, base, "/research", {"topic": topic}, key)
@@ -63,15 +69,24 @@ async def execute_tool(client, cfg, name, args):
     return envelope(name, {"error": "unknown_tool", "message": f"No tool named {name}"})
 
 
-def _llm_kwargs(cfg):
+def _llm_kwargs(cfg: dict) -> dict[str, Any]:
+    """Build extra kwargs for the OpenAI completions call from config."""
     llm = cfg["llm"]
-    kwargs = {"max_completion_tokens": llm.get("max_tokens", 1500)}
+    kwargs: dict[str, Any] = {"max_completion_tokens": llm.get("max_tokens", 1500)}
     if llm.get("reasoning_effort", "none") == "none":
         kwargs["temperature"] = llm.get("temperature", 0.0)
     return kwargs
 
 
-async def stream_turn(oai, client, cfg, messages, state, round_count=0):
+async def stream_turn(
+    oai: openai.AsyncOpenAI,
+    client: httpx.AsyncClient,
+    cfg: dict,
+    messages: list[dict],
+    state: dict,
+    round_count: int = 0,
+) -> None:
+    """Stream one LLM turn, recursing if the model invokes tools."""
     stream = await oai.chat.completions.create(
         model=cfg["llm"]["model_name"],
         messages=messages,
@@ -79,8 +94,8 @@ async def stream_turn(oai, client, cfg, messages, state, round_count=0):
         stream=True,
         **_llm_kwargs(cfg),
     )
-    content_parts = []
-    tool_calls = {}
+    content_parts: list[str] = []
+    tool_calls: dict[int, dict] = {}
 
     async for chunk in stream:
         if not chunk.choices:
@@ -103,35 +118,36 @@ async def stream_turn(oai, client, cfg, messages, state, round_count=0):
                 if tc_delta.function.arguments:
                     tool_calls[idx]["args"] += tc_delta.function.arguments
 
-    if tool_calls:
-        assistant_msg = {
-            "role": "assistant",
-            "content": "".join(content_parts) or None,
-            "tool_calls": [
-                {"id": tc["id"], "type": "function", "function": {"name": tc["name"], "arguments": tc["args"]}}
-                for tc in tool_calls.values()
-            ],
-        }
-        messages.append(assistant_msg)
-
-        for tc in tool_calls.values():
-            try:
-                args = json.loads(tc["args"])
-            except json.JSONDecodeError:
-                args = {}
-                result_str = envelope(tc["name"], {"error": "invalid_args", "message": f"Could not parse tool arguments: {_cap(tc['args'], 100)}"})
-                messages.append({"role": "tool", "tool_call_id": tc["id"], "content": result_str})
-                continue
-            result_str = await execute_tool(client, cfg, tc["name"], args)
-            messages.append({"role": "tool", "tool_call_id": tc["id"], "content": result_str})
-
-        round_count += 1
-        if round_count >= MAX_TOOL_ROUNDS:
-            print("\n  [Max tool rounds reached]", flush=True)
-            return
-        return await stream_turn(oai, client, cfg, messages, state, round_count)
-    else:
+    if not tool_calls:
         full = "".join(content_parts)
         print()
         messages.append({"role": "assistant", "content": full})
         state["partial"] = ""
+        return
+
+    # Tool calls present -- execute them, then recurse for the model's follow-up.
+    assistant_msg = {
+        "role": "assistant",
+        "content": "".join(content_parts) or None,
+        "tool_calls": [
+            {"id": tc["id"], "type": "function", "function": {"name": tc["name"], "arguments": tc["args"]}}
+            for tc in tool_calls.values()
+        ],
+    }
+    messages.append(assistant_msg)
+
+    for tc in tool_calls.values():
+        try:
+            parsed_args = json.loads(tc["args"])
+        except json.JSONDecodeError:
+            error_data = {"error": "invalid_args", "message": f"Could not parse tool arguments: {truncate(tc['args'], 100)}"}
+            messages.append({"role": "tool", "tool_call_id": tc["id"], "content": envelope(tc["name"], error_data)})
+            continue
+        result_str = await execute_tool(client, cfg, tc["name"], parsed_args)
+        messages.append({"role": "tool", "tool_call_id": tc["id"], "content": result_str})
+
+    round_count += 1
+    if round_count >= MAX_TOOL_ROUNDS:
+        print("\n  [Max tool rounds reached]", flush=True)
+        return
+    return await stream_turn(oai, client, cfg, messages, state, round_count)

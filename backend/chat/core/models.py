@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel
 
@@ -6,7 +6,7 @@ from pydantic import BaseModel
 class WeatherObservation(BaseModel):
     temp_c: float
     condition: str
-    humidity: int | float
+    humidity: float
 
 
 class NormalisedWeather(BaseModel):
@@ -20,7 +20,7 @@ class ResearchResult(BaseModel):
     kind: Literal["fresh", "cached", "truncated", "timeout"]
     topic: str = ""
     summary: str = ""
-    sources: list = []
+    sources: list[Any] = []
     cache_age_seconds: int | None = None
     stale_warning: str | None = None
     processed_topic: str | None = None

@@ -1,6 +1,5 @@
 # Elyos take-home — configuration
-# Keep model selection config-driven (per north_stars.md rule 21).
-# Model names must come from backend/reference_docs/allowed_models.csv.
+# Keep model selection config-driven (per north_stars.md).
 
 elyos_api:
   base_url: "https://elyos-interview-907656039105.europe-west2.run.app"
@@ -16,7 +15,6 @@ elyos_api:
 
 llm:
   # Use a single provider's official SDK for the chat app (per take-home: "OpenAI, Anthropic, or similar").
-  # Allowed names live in backend/reference_docs/allowed_models.csv.
   model_name: "gpt-5.4-mini"
   max_tokens: 1500
   temperature: 0.0
