@@ -1,4 +1,5 @@
 import csv
+import logging
 import os
 import sys
 from typing import Any
@@ -7,6 +8,8 @@ import yaml
 from dotenv import load_dotenv
 
 from backend.chat.paths import ALLOWED_MODELS_PATH, CONFIG_PATH, PROJECT_ROOT
+
+log = logging.getLogger(__name__)
 
 PROVIDER_ENV: dict[str, str] = {
     "openai": "OPENAI_API_KEY",
@@ -46,4 +49,5 @@ def load_config() -> dict[str, Any]:
 
     _require_env(PROVIDER_ENV[provider])
     _require_env(cfg["elyos_api"]["api_key_env"])
+    log.info("Config loaded: model=%s provider=%s", model, provider)
     return cfg

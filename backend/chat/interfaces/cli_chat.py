@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import signal
 
 import httpx
@@ -66,6 +67,10 @@ async def _async_main() -> None:
 
 
 def main() -> None:
+    logging.basicConfig(
+        format="%(name)s %(levelname)s: %(message)s",
+        level=logging.INFO,
+    )
     asyncio.run(_async_main())
 
 

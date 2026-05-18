@@ -9,6 +9,12 @@ import httpx
 # Suppress noisy Bedrock/SageMaker warnings from LiteLLM before importing it.
 logging.getLogger("LiteLLM").setLevel(logging.ERROR)
 import litellm  # noqa: E402
+from langsmith import traceable
+
+# Forward every LLM call to LangSmith. Config via LANGSMITH_* env vars in .env.
+litellm.callbacks = ["langsmith"]
+
+log = logging.getLogger(__name__)
 
 from backend.chat.core.parsers import envelope, normalise_weather, parse_research, truncate
 from backend.chat.prompts import TOOLS
@@ -17,6 +23,7 @@ MAX_TOOL_ROUNDS: int = 5
 MAX_THROTTLE_RETRIES: int = 5
 
 
+@traceable(run_type="tool", name="elyos_api_call")
 async def call_api(
     client: httpx.AsyncClient, base_url: str, endpoint: str, params: dict, api_key: str
 ) -> dict:
@@ -24,6 +31,7 @@ async def call_api(
     timeout = 20.0 if endpoint == "/research" else 15.0
 
     for attempt in range(MAX_THROTTLE_RETRIES + 1):
+        log.debug("API request: GET %s params=%s (attempt %d)", endpoint, params, attempt + 1)
         try:
             resp = await client.get(
                 f"{base_url}{endpoint}",
@@ -32,8 +40,10 @@ async def call_api(
                 timeout=timeout,
             )
         except httpx.TimeoutException:
+            log.warning("Timeout on %s after %.0fs", endpoint, timeout)
             return {"error": "request_timeout", "message": f"{endpoint} request timed out"}
         except httpx.HTTPError as exc:
+            log.warning("HTTP error on %s: %s", endpoint, exc)
             return {"error": "http_error", "message": str(exc)}
 
         if resp.status_code != 200:
@@ -53,13 +63,15 @@ async def call_api(
 
         wait = data.get("retry_after_seconds", 30) + 1
         if attempt >= MAX_THROTTLE_RETRIES:
+            log.warning("Throttle retries exhausted on %s", endpoint)
             return {"error": "throttle_exhausted", "message": "Rate limit retries exhausted"}
-        print(f"\r  Rate limited, waiting {wait}s...", flush=True)
+        log.warning("Throttled on %s, retrying in %ds (attempt %d/%d)", endpoint, wait, attempt + 1, MAX_THROTTLE_RETRIES)
         await asyncio.sleep(wait)
 
     return {"error": "throttle_exhausted", "message": "Rate limit retries exhausted"}
 
 
+@traceable(run_type="tool", name="execute_tool")
 async def execute_tool(client: httpx.AsyncClient, cfg: dict, name: str, args: dict) -> str:
     """Call the Elyos API for a tool and return an envelope-wrapped JSON string."""
     base_url = cfg["elyos_api"]["base_url"]
@@ -108,6 +120,7 @@ def _accumulate_tool_call(tool_calls: dict[int, dict], tc_delta: Any) -> None:
         tool_calls[idx]["args"] += tc_delta.function.arguments
 
 
+@traceable(run_type="chain", name="chat_turn")
 async def stream_turn(
     client: httpx.AsyncClient,
     cfg: dict,
@@ -172,6 +185,6 @@ async def stream_turn(
         messages.append({"role": "tool", "tool_call_id": tc["id"], "content": result})
 
     if round_count + 1 >= MAX_TOOL_ROUNDS:
-        print("\n  [Max tool rounds reached]", flush=True)
+        log.warning("Max tool rounds (%d) reached, stopping", MAX_TOOL_ROUNDS)
         return
     return await stream_turn(client, cfg, messages, state, round_count + 1)

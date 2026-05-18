@@ -21,6 +21,7 @@ dependencies = [
 
     # LiteLLM + helpers ported from eugenix_cp2 (kept available, optional to use)
     "litellm",
+    "langsmith",
     "langchain-core",
     "langchain-litellm",
     "pydantic",
