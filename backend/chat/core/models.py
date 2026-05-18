@@ -21,8 +21,9 @@ class ResearchResult(BaseModel):
     topic: str = ""
     summary: str = ""
     sources: list[Any] = []
+    generated_at: str | None = None
     cache_age_seconds: int | None = None
-    stale_warning: str | None = None
+    cache_age: str | None = None
     processed_topic: str | None = None
     original_topic_length: int | None = None
     message: str | None = None

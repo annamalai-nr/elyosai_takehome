@@ -52,7 +52,9 @@ def validate() -> None:
         "generated_at": "2024-03-15", "cached": True, "cache_age_seconds": 99,
     })
     assert isinstance(rc, ResearchResult) and rc.kind == "cached", f"Cached failed: {rc}"
-    assert rc.stale_warning is not None
+    assert rc.cache_age_seconds == 99 and rc.cache_age == "99 seconds" and rc.generated_at == "2024-03-15"
+    cached_env = json.loads(envelope("research_topic", rc))
+    assert "stale_warning" not in cached_env["data"]
     ok += 1
 
     # Truncated research
