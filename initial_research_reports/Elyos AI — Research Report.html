@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Elyos AI — Research Report</title>
+<style>
+  :root {
+    --bg: #fafaf7;
+    --paper: #ffffff;
+    --ink: #1a1a1a;
+    --muted: #5c5c5c;
+    --rule: #e5e3dc;
+    --accent: #b94a1f;
+    --accent-soft: #fbe9df;
+    --highlight: #fff6d6;
+    --code-bg: #f3f1ec;
+    --good: #166534;
+    --good-soft: #dcfce7;
+    --warn: #92400e;
+    --warn-soft: #fef3c7;
+    --info: #1e40af;
+    --info-soft: #dbeafe;
+    --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Times New Roman", Times, serif;
+    --font-mono: "SF Mono", Menlo, Monaco, Consolas, "Courier New", monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    gap: 0;
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+
+  /* Sidebar / TOC */
+  aside {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 28px 20px 28px 28px;
+    border-right: 1px solid var(--rule);
+    background: var(--bg);
+  }
+  aside .brand {
+    font-family: var(--font-serif);
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: var(--ink);
+  }
+  aside .brand-sub {
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 22px;
+  }
+  aside nav ol {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    counter-reset: section;
+  }
+  aside nav li {
+    counter-increment: section;
+    margin-bottom: 6px;
+  }
+  aside nav a {
+    display: block;
+    padding: 6px 10px;
+    border-radius: 6px;
+    color: var(--ink);
+    text-decoration: none;
+    font-size: 13.5px;
+    line-height: 1.35;
+    border-left: 2px solid transparent;
+    transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+  }
+  aside nav a::before {
+    content: counter(section, decimal-leading-zero) "  ";
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    font-size: 11.5px;
+  }
+  aside nav a:hover { background: var(--accent-soft); color: var(--accent); border-left-color: var(--accent); }
+
+  /* Main content */
+  main {
+    padding: 48px 56px 96px;
+    background: var(--paper);
+    min-width: 0;
+  }
+  header.title-block {
+    margin-bottom: 36px;
+    padding-bottom: 28px;
+    border-bottom: 2px solid var(--ink);
+  }
+  header.title-block h1 {
+    font-family: var(--font-serif);
+    font-size: 44px;
+    line-height: 1.1;
+    margin: 0 0 8px;
+    letter-spacing: -0.01em;
+  }
+  header.title-block .subtitle {
+    color: var(--muted);
+    font-size: 16px;
+    font-style: italic;
+  }
+  header.title-block dl {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    column-gap: 18px;
+    row-gap: 4px;
+    margin: 22px 0 0;
+    font-size: 14px;
+  }
+  header.title-block dt { color: var(--muted); font-weight: 500; }
+  header.title-block dd { margin: 0; color: var(--ink); }
+
+  section { margin-bottom: 56px; }
+  section.section h2 {
+    font-family: var(--font-serif);
+    font-size: 30px;
+    line-height: 1.15;
+    margin: 0 0 18px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--rule);
+    letter-spacing: -0.01em;
+  }
+  section.section h2 .num {
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    margin-right: 14px;
+    font-size: 0.78em;
+    font-weight: 500;
+  }
+  h3 {
+    font-family: var(--font-body);
+    font-size: 19px;
+    margin-top: 30px;
+    margin-bottom: 10px;
+    color: var(--ink);
+    letter-spacing: -0.005em;
+  }
+  h4 {
+    font-family: var(--font-body);
+    font-size: 16px;
+    margin-top: 22px;
+    margin-bottom: 8px;
+    color: var(--ink);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+  }
+
+  p { margin: 0 0 14px; }
+  ul, ol { margin: 0 0 16px; padding-left: 24px; }
+  ul li, ol li { margin-bottom: 6px; }
+
+  a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; text-decoration-thickness: 1px; }
+  a:hover { background: var(--accent-soft); }
+
+  strong { font-weight: 700; color: var(--ink); }
+  em { font-style: italic; color: var(--ink); }
+
+  code {
+    font-family: var(--font-mono);
+    background: var(--code-bg);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 0.88em;
+  }
+  pre {
+    background: var(--code-bg);
+    border-radius: 8px;
+    padding: 16px 18px;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: 13.5px;
+    line-height: 1.5;
+    margin: 0 0 18px;
+  }
+  pre code { background: transparent; padding: 0; }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0 22px;
+    font-size: 14.5px;
+    background: var(--paper);
+  }
+  th, td {
+    border-bottom: 1px solid var(--rule);
+    padding: 10px 12px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: #f7f5ef;
+    font-weight: 600;
+    font-size: 12.5px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: #faf8f3; }
+
+  /* Callouts */
+  .callout {
+    border-left: 4px solid var(--accent);
+    background: var(--accent-soft);
+    padding: 16px 20px;
+    border-radius: 0 8px 8px 0;
+    margin: 0 0 20px;
+  }
+  .callout.tldr {
+    border-left-color: var(--ink);
+    background: var(--highlight);
+  }
+  .callout.good { border-left-color: var(--good); background: var(--good-soft); }
+  .callout.warn { border-left-color: var(--warn); background: var(--warn-soft); }
+  .callout.info { border-left-color: var(--info); background: var(--info-soft); }
+  .callout h4 { margin-top: 0; color: var(--ink); }
+  .callout p:last-child { margin-bottom: 0; }
+
+  blockquote {
+    border-left: 3px solid var(--rule);
+    margin: 14px 0;
+    padding: 0 0 0 16px;
+    color: var(--muted);
+    font-style: italic;
+  }
+
+  hr.divider {
+    border: none;
+    border-top: 1px solid var(--rule);
+    margin: 48px 0;
+  }
+
+  /* Tag pills */
+  .tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 999px;
+    margin-right: 6px;
+    background: var(--code-bg);
+    color: var(--muted);
+  }
+  .tag.cited { background: var(--good-soft); color: var(--good); }
+  .tag.inferred { background: var(--warn-soft); color: var(--warn); }
+  .tag.likely { background: var(--info-soft); color: var(--info); }
+
+  /* Star rating */
+  .stars { color: var(--accent); letter-spacing: 1px; font-size: 13px; }
+  .stars-muted { color: var(--rule); }
+
+  /* Print */
+  @media print {
+    aside { display: none; }
+    .layout { grid-template-columns: 1fr; max-width: none; }
+    main { padding: 24px; }
+    a { color: var(--ink); text-decoration: none; }
+    section { page-break-inside: avoid; }
+  }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    aside { position: relative; height: auto; border-right: none; border-bottom: 1px solid var(--rule); padding: 18px; }
+    main { padding: 28px 22px 64px; }
+    header.title-block h1 { font-size: 32px; }
+    section.section h2 { font-size: 24px; }
+  }
+
+  ul.sources { list-style: none; padding-left: 0; }
+  ul.sources li { margin-bottom: 4px; padding-left: 18px; position: relative; }
+  ul.sources li::before { content: "→"; position: absolute; left: 0; color: var(--muted); }
+
+  /* Star rating cell */
+  td.center { text-align: center; }
+
+  /* Footer */
+  footer.report-footer {
+    margin-top: 64px;
+    padding-top: 24px;
+    border-top: 1px solid var(--rule);
+    font-size: 13px;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <aside>
+    <div class="brand">Elyos AI</div>
+    <div class="brand-sub">Research Report · 2026-05-15</div>
+    <nav aria-label="Table of contents">
+      <ol>
+        <li><a href="#sec-0">How to read this</a></li>
+        <li><a href="#sec-1">Executive summary</a></li>
+        <li><a href="#sec-2">Company snapshot</a></li>
+        <li><a href="#sec-3">Founders &amp; team</a></li>
+        <li><a href="#sec-4">Product surface — six agents</a></li>
+        <li><a href="#sec-5">Integrations — the moat</a></li>
+        <li><a href="#sec-6">Tech stack — confirmed &amp; inferred</a></li>
+        <li><a href="#sec-7">Customer evidence</a></li>
+        <li><a href="#sec-8">Strategic positioning — CHM</a></li>
+        <li><a href="#sec-9">Competitive landscape</a></li>
+        <li><a href="#sec-10">Series A priorities</a></li>
+        <li><a href="#sec-11">Logical next features</a></li>
+        <li><a href="#sec-12">The take-home itself</a></li>
+        <li><a href="#sec-13">The prototype — concrete plan</a></li>
+        <li><a href="#sec-14">On-site strategy (2.5 hrs)</a></li>
+        <li><a href="#sec-15">Implications for you (Anna)</a></li>
+        <li><a href="#sec-16">Questions to ask them</a></li>
+        <li><a href="#sec-17">Open risks &amp; uncertainties</a></li>
+        <li><a href="#sec-18">TL;DR (one page)</a></li>
+        <li><a href="#sources">Sources</a></li>
+      </ol>
+    </nav>
+  </aside>
+
+  <main>
+
+    <header class="title-block">
+      <h1>Elyos AI — Research Report</h1>
+      <div class="subtitle">Deep dive · interview prep · prototype direction</div>
+      <dl>
+        <dt>For</dt>          <dd>Annamalai Narayanan</dd>
+        <dt>Purpose</dt>      <dd>Interview prep + prototype direction for in-person meeting</dd>
+        <dt>Date</dt>         <dd>2026-05-15</dd>
+        <dt>Confidentiality</dt><dd>Personal; do not share</dd>
+      </dl>
+    </header>
+
+    <!-- 0 -->
+    <section class="section" id="sec-0">
+      <h2><span class="num">0</span>How to read this</h2>
+      <p>This report has three jobs:</p>
+      <ol>
+        <li>Give you a deep picture of Elyos AI — the company, the product, the team, the trajectory.</li>
+        <li>Infer where the product likely goes next, so the prototype you bring to the on-site lands as "things they actually want."</li>
+        <li>Translate everything back into concrete moves: what to build in 1–2 days, what to mention in conversation, what to ask them.</li>
+      </ol>
+      <p>Throughout, I separate <span class="tag cited">cited</span> facts (linked sources at the end) from <span class="tag inferred">inferred</span> observations (clearly flagged). Treat inferences as working hypotheses to validate, not as truth.</p>
+    </section>
+
+    <!-- 1 -->
+    <section class="section" id="sec-1">
+      <h2><span class="num">1</span>Executive Summary</h2>
+
+      <p>Elyos AI is a London-based, YC&nbsp;S23-backed company building voice-first AI customer service agents for <strong>trades and field services</strong> — plumbing, gas/electric, HVAC, fire &amp; security, home services, housing associations. They closed a <strong>$13M Series&nbsp;A in January 2026</strong> led by Blackbird Ventures (with Pi Labs, Y Combinator, and 468 Capital participating), bringing total funding to <strong>$16.2M</strong>. Team is now ~20 people, based at WeWork 145 City Road, London.</p>
+
+      <p>Six products are live, all voice-first, all deeply integrated with trades CRMs (Simpro, JobLogic, Commusoft, ServiceTitan, GoHighLevel) and WhatsApp. They claim <strong>15+ customers, 0% churn, 95% CSAT</strong>, with marquee accounts like James Frew (handling 500+ calls/day via an Elyos agent), GasCare (all six agents live), and Amax Fire &amp; Security (30% of technical calls fully autonomous).</p>
+
+      <p>The take-home you've been given is a <strong>45–90 min CLI exercise</strong> (streaming, tool calling, quirky-API discovery). But the on-site explicitly tees up where the product actually lives: <strong>real-time voice + concurrent tool calls + scaling to 100 concurrent calls + STT (Deepgram) + TTS (ElevenLabs)</strong>. The pair-programming session will literally extend your take-home toward voice I/O, concurrent tool calls, and context management. That alignment with the Eugenix CP2 voice agent you've already shipped is the strongest single thing going for you.</p>
+
+      <p>The strategic story they're telling is also worth absorbing: they don't see themselves as "AI receptionist for plumbers." They're framing this as <strong>the operating system for the AI era of field services</strong>, anchored on a "Communication History Management" (CHM) idea — a queryable log of every customer conversation that becomes the new source of truth, eventually replacing the CRM. That gives you a wide canvas for prototype ideas beyond just "another voice bot."</p>
+    </section>
+
+    <!-- 2 -->
+    <section class="section" id="sec-2">
+      <h2><span class="num">2</span>Company Snapshot</h2>
+
+      <h3>Funding history</h3>
+      <table>
+        <thead><tr><th>Round</th><th>Date</th><th>Amount</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Seed</td><td>Oct 2023</td><td>$3M</td><td>Post-YC S23</td></tr>
+          <tr><td>Series A</td><td>Jan 2026</td><td>$13M</td><td>Led by Blackbird Ventures; Pi Labs, YC, 468 Capital</td></tr>
+          <tr><td><strong>Total</strong></td><td></td><td><strong>$16.2M</strong></td><td></td></tr>
+        </tbody>
+      </table>
+      <p>Series A announcement: 19 January 2026 (Blackbird investment notes). Lead partner: James Palmer at Blackbird; Faisal Butt (Managing Partner) at Pi Labs.</p>
+
+      <h3>Stated use of Series A funds (verbatim)</h3>
+      <ul>
+        <li>Expand engineering, operations, and go-to-market teams.</li>
+        <li>Deepen integrations with leading field-service Job Management Systems.</li>
+        <li>Launch new AI agent capabilities across <strong>voice, email, and messaging</strong>.</li>
+        <li>International expansion in 2026.</li>
+      </ul>
+
+      <h3>Headcount</h3>
+      <ul>
+        <li>Y Combinator profile lists team size as <strong>20</strong> (April 2026 snapshot).</li>
+        <li>Welcome to the Jungle / Otta lists "1–20 employees" — consistent with that.</li>
+        <li>7 people listed on YC at one earlier snapshot, so they've roughly tripled since closing the Series A.</li>
+      </ul>
+
+      <h3>Location</h3>
+      <ul>
+        <li>HQ: 145 City Road, WeWork, EC1V 1AZ, London.</li>
+        <li>Spent 2023 in San Francisco during YC, then moved back to London "to be where our customers were" (per the Founders' blog post and Endeavor Greece interview).</li>
+      </ul>
+
+      <h3>Origin story (matters for how to talk to them)</h3>
+      <p>Founded in mid-2023; YC&nbsp;S23 batch. Original thesis was AI agents for energy flexibility / commercial demand response. Through customer discovery they realised the bottleneck wasn't software or hardware — it was <strong>fragmented, manual communication</strong> between installers, planners, procurement, and customers. They pivoted in <strong>February 2025</strong> to AI voice agents for field services. The Endeavor interview describes the pivot as feeling "inevitable" once voice tech matured enough (summer 2024).</p>
+
+      <div class="callout">
+        <h4>Why this matters for your interview</h4>
+        <p>This is a team that pivoted hard, late in the YC lifecycle, on the basis of customer evidence — not because the original thesis failed but because they found a bigger wound. Three useful signals from this:</p>
+        <ul>
+          <li>They reward people who <strong>stay close to the problem</strong> and let evidence drive decisions.</li>
+          <li>They prize <strong>vertical depth</strong> over horizontal generalisation. Adrian's Endeavor quote: <em>"Early on, we consciously chose not to build a generic horizontal voice product."</em> Bring this lens.</li>
+          <li>They explicitly value <strong>slow on the things that are painful to unwind later</strong> — data models, call-handling logic, CRM integrations. The take-home rewards both speed AND architectural awareness. They've said so out loud.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 3 -->
+    <section class="section" id="sec-3">
+      <h2><span class="num">3</span>Founders &amp; Team</h2>
+
+      <table>
+        <thead><tr><th>Person</th><th>Role</th><th>Background</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Adrian Johnston</strong></td>
+            <td>Co-Founder &amp; Co-CEO</td>
+            <td>Oxford Maths BSc + MSc; Harvard MPA (AI policy); ex-Goldman Sachs (Global Capital Markets); BCG consultant (years optimising call centres); previously co-founded <strong>Una Brands</strong> → $70M ARR, $100M raised. Second-time founder.</td>
+          </tr>
+          <tr>
+            <td><strong>Philippa "Pip" Brown</strong></td>
+            <td>Co-Founder &amp; Co-CEO</td>
+            <td>Rolls-Royce ops consultant; Chief of Staff to OVO Energy's COO → Head of Strategy; ran ops for &gt;1,000 engineers; helped optimise an OVO call centre handling ~19,000 calls/day; INSEAD MBA. <strong>Personally drives all of Elyos's ARR</strong> per Blackbird notes.</td>
+          </tr>
+          <tr>
+            <td><strong>Panos Stravopodis</strong></td>
+            <td>Co-Founder &amp; CTO</td>
+            <td>15+ years; ex-VP Engineering at Bulb / Zoa (built Bulb's entire call-centre stack from scratch as CTO; led 150+ engineers); also Funding Circle, Bynder. Greek-born; Endeavor Greece entrepreneur. <strong>GitHub: pstrav.</strong> This is the person who set your take-home.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Reading the team</h3>
+      <p>Two domain experts (Pip, Panos) who lived inside the exact pain at OVO / Bulb. One serial founder with a commercial outlook (Adrian). Panos is your hiring counterpart in technical sessions — read everything he's said publicly. Notably:</p>
+      <ul>
+        <li><strong>Deepgram podcast (AI Minds #075)</strong> — Panos went deep on the pivot, the stack, and the strategy. Worth watching/listening before the on-site.</li>
+        <li><strong>GitHub <code>pstrav</code></strong> — public, low-activity, but one fork stands out: <strong><code>pstrav/agents</code> is a fork of <code>livekit/agents</code></strong>, the LiveKit Python framework for real-time voice agents. This is the single strongest stack tell I've found.</li>
+      </ul>
+
+      <h3>Cultural signals (from the team blog post and Endeavor interview)</h3>
+      <ul>
+        <li>"Make the next pot of coffee" attitude — explicit in the JD.</li>
+        <li>"Customer dinners" are central to product development — Gas Care, Amax, Aquila all named as feedback partners.</li>
+        <li>"Move fast on customer-visible value, slow on things painful to unwind later."</li>
+        <li>"Every member of the team, every week, spends time in person with customers" — per Blackbird.</li>
+      </ul>
+
+      <p>If you walk in with examples of (a) building production voice agents end-to-end, (b) iterating on real customer recordings (which you did at Eugenix CP2), and (c) deciding what to ship rough vs. what to harden — you're speaking their language.</p>
+    </section>
+
+    <!-- 4 -->
+    <section class="section" id="sec-4">
+      <h2><span class="num">4</span>Product Surface — the six AI Agents</h2>
+
+      <p>Elyos sells six agent products. All voice-first, all CRM-integrated. Here they are, with each agent's job and your prototype-relevance score:</p>
+
+      <h3>4.1 Out-of-hours AI Agent — "Never miss a call. Ever."</h3>
+      <ul>
+        <li><strong>Shape:</strong> Inbound, 24/7.</li>
+        <li><strong>Job:</strong> Answer after-hours calls, diagnose faults over the phone, transfer emergency call-outs to the on-call engineer, book/reschedule jobs in the FSM, send WhatsApp notifications.</li>
+        <li><strong>Customer agent names seen:</strong> "Kate" at GasCare.</li>
+        <li><strong>Why customers buy it:</strong> Stops them losing emergency revenue to outsourced answering services that don't integrate with their FSM.</li>
+        <li><strong>Prototype relevance:</strong> <span class="stars">★★★★★</span> — closest match to your Eugenix CP2 inbound flow.</li>
+      </ul>
+
+      <h3>4.2 Daytime CSR — "Zero wait time, maximum efficiency"</h3>
+      <ul>
+        <li><strong>Shape:</strong> Inbound, fully autonomous, <strong>unlimited concurrent calls</strong>.</li>
+        <li><strong>Job:</strong> General enquiries, book/reschedule jobs, fault diagnosis. "Expertly trained in plumbing and electrics."</li>
+        <li><strong>Customer agent names seen:</strong> "Jamie" at James Frew, handling 500+ calls/day, 80% of their daily call volume.</li>
+        <li><strong>Why customers buy it:</strong> Handles peak demand without scaling headcount. James Frew's 10,000+ monthly call base ran on a fixed team plus Jamie.</li>
+        <li><strong>Prototype relevance:</strong> <span class="stars">★★★★★</span> — biggest surface area to differentiate on; needs richer integration logic than OOH.</li>
+      </ul>
+
+      <h3>4.3 AI Sales Executive — "Speed to lead"</h3>
+      <ul>
+        <li><strong>Shape:</strong> Outbound + follow-up.</li>
+        <li><strong>Job:</strong> Call new leads within seconds of enquiry, qualify, follow up on open quotes, push them through to booking.</li>
+        <li><strong>Customer named:</strong> Aquila gave feedback on Sales Agent quality (per the Humans Behind the Agents post).</li>
+        <li><strong>Why customers buy it:</strong> UK trades research shows ~50–70% of leads go to whoever responds first; this captures that window.</li>
+        <li><strong>Prototype relevance:</strong> <span class="stars">★★★</span> — different mode (outbound campaigns at scale, retry/queue logic) but well within reach.</li>
+      </ul>
+
+      <h3>4.4 Appointment Confirmation Agent — "Reduce your no-access rate"</h3>
+      <ul>
+        <li><strong>Shape:</strong> Outbound, daily campaigns.</li>
+        <li><strong>Job:</strong> Phone every customer in the diary before the engineer dispatches; reschedule if needed; add fresh notes to the job in the FSM.</li>
+        <li><strong>Reported impact:</strong> &gt;40% reduction in no-access rates (GasCare).</li>
+        <li><strong>Prototype relevance:</strong> <span class="stars">★★★★</span> — direct match to your Eugenix CP2 outbound post-op flow; cleanest scope.</li>
+      </ul>
+
+      <h3>4.5 Scheduling Assistant — "Scheduling, but with AI"</h3>
+      <ul>
+        <li><strong>Shape:</strong> Outbound + scheduling intelligence.</li>
+        <li><strong>Job:</strong> Plan preventative maintenance (PPM) bookings in advance, service renewal reminder calls, optimise the diary by engineer location/skill/customer preference. Can run advisory ("recommend slots") or autonomous.</li>
+        <li><strong>Prototype relevance:</strong> <span class="stars">★★</span> — heavy on optimisation logic; harder to demo crisply in 2 days.</li>
+      </ul>
+
+      <h3>4.6 Field Engineer Assistant — "No more end of day paperwork"</h3>
+      <ul>
+        <li><strong>Shape:</strong> Inbound on a <strong>dedicated engineer line</strong>. Engineers call IT (i.e., the AI), not the reverse.</li>
+        <li><strong>Job:</strong> Update job notes by voice, close jobs, update status, manage timesheets — keep the office phone lines free for customers.</li>
+        <li><strong>Prototype relevance:</strong> <span class="stars">★★★</span> — different audience (the engineer, not the customer). Interesting differentiated angle if you want to surprise them.</li>
+      </ul>
+
+      <div class="callout info">
+        <h4>Patterns across all six</h4>
+        <p>Every agent has the same pipeline shape: <strong>phone (Twilio/SIP) → STT (Deepgram) → LLM with tool calls → TTS (ElevenLabs) → phone</strong>, with tools that read/write the customer's FSM. The differentiators are: which direction the call goes, what knowledge/scripts the agent is loaded with, and what tools it can invoke.</p>
+        <p>This is a critical insight for your prototype: <strong>build the underlying pipeline once and the agent role is mostly prompting + tool set + dialog policy</strong>. Show them you understand that.</p>
+      </div>
+    </section>
+
+    <!-- 5 -->
+    <section class="section" id="sec-5">
+      <h2><span class="num">5</span>Integrations — the moat</h2>
+
+      <p>The "Approved integrations" page lists six logos and confirms they're "fully integrated":</p>
+
+      <table>
+        <thead><tr><th>Integration</th><th>Category</th><th>Geography</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Simpro</strong></td><td>Commercial field service management software</td><td>Global (AU-origin, big in UK)</td></tr>
+          <tr><td><strong>JobLogic</strong></td><td>Field service management software</td><td>UK</td></tr>
+          <tr><td><strong>Commusoft</strong></td><td>Job management software</td><td>UK</td></tr>
+          <tr><td><strong>ServiceTitan</strong></td><td>Field management software</td><td>USA-first</td></tr>
+          <tr><td><strong>GoHighLevel</strong></td><td>CRM for trades and field services</td><td>Global</td></tr>
+          <tr><td><strong>WhatsApp</strong></td><td>Async customer comms</td><td>Global</td></tr>
+        </tbody>
+      </table>
+
+      <p>What the integrations actually do (from the agent pages):</p>
+      <ul>
+        <li>Book / reschedule jobs in the FSM.</li>
+        <li>Read job/customer/engineer/diary data.</li>
+        <li>Update job notes and status mid-call.</li>
+        <li>Trigger WhatsApp notifications to the office/on-call engineer.</li>
+        <li>Dispatch the on-call engineer.</li>
+      </ul>
+
+      <p><span class="tag inferred">inferred</span> from Series A messaging: "Deepening integrations with leading field-service Job Management Systems" is one of four funding priorities. Expect more FSM connectors (Field Edge, Jobber, BigChange, Tradify), payments providers, and email systems to land this year.</p>
+
+      <h3>Why integrations are the moat</h3>
+      <p>Per the Endeavor interview, Adrian explicitly says CRM integrations are one of the things they "treated as long-term decisions even if it delayed short-term speed." Vertical AI plus tight integration depth is what makes them defensible against horizontal voice platforms (Vapi, Retell, Bland) and against generic AI receptionist services.</p>
+    </section>
+
+    <!-- 6 -->
+    <section class="section" id="sec-6">
+      <h2><span class="num">6</span>Tech Stack — what's confirmed, what's inferred</h2>
+
+      <h3><span class="tag cited">cited</span> Confirmed (from take-home, careers JD, and public material)</h3>
+      <table>
+        <thead><tr><th>Component</th><th>Tech</th><th>Source</th></tr></thead>
+        <tbody>
+          <tr><td>Speech-to-Text</td><td><strong>Deepgram</strong> (streaming)</td><td>Take-home explicitly says "Deepgram Streaming SDK"; Panos did the Deepgram AI Minds podcast.</td></tr>
+          <tr><td>Text-to-Speech</td><td><strong>ElevenLabs</strong> (streaming)</td><td>Take-home explicitly says "ElevenLabs Streaming SDK".</td></tr>
+          <tr><td>LLMs</td><td><strong>OpenAI and/or Anthropic</strong> (multi-provider)</td><td>Take-home says "OpenAI, Anthropic, or similar".</td></tr>
+          <tr><td>Languages</td><td><strong>Python + TypeScript</strong> (both core)</td><td>Take-home: "Python or TypeScript preferred — we use both."</td></tr>
+          <tr><td>Cloud</td><td><strong>Google Cloud Platform</strong> (Cloud Run, europe-west2)</td><td>The take-home test API runs at <code>*.europe-west2.run.app</code>.</td></tr>
+          <tr><td>Concurrency model</td><td><strong>Async / event-driven</strong></td><td>Take-home heavy on <code>asyncio</code>; JD bonus mentions "event-driven systems".</td></tr>
+        </tbody>
+      </table>
+
+      <h3><span class="tag inferred">inferred</span> Strongly inferred</h3>
+      <table>
+        <thead><tr><th>Component</th><th>Tech</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td>Voice-agent orchestration</td><td><strong>LiveKit Agents</strong></td><td>Panos's personal GitHub <code>pstrav</code> has <strong>a public fork of <code>livekit/agents</code></strong>, the canonical LiveKit Python real-time voice framework. This is the single strongest signal in the entire research pass.</td></tr>
+          <tr><td>Telephony / PSTN</td><td><strong>Twilio</strong> (SIP trunked to LiveKit, or Twilio Media Streams)</td><td>Standard LiveKit pairing. Twilio is the de facto for UK trades. ALMcorp and similar comparisons of LiveKit-based stacks all pair via Twilio.</td></tr>
+          <tr><td>LLM router / multi-provider</td><td><strong>OpenAI SDK + Anthropic SDK directly, or LiteLLM / similar</strong></td><td>"OpenAI, Anthropic, or similar" implies provider-neutral. They're at the scale where router/proxy starts to matter.</td></tr>
+          <tr><td>Infrastructure</td><td><strong>Containers on GCP</strong>; likely GKE or Cloud Run + a workflow engine</td><td>Take-home runs on Cloud Run; JD bonus mentions "Kubernetes, serverless, distributed systems".</td></tr>
+          <tr><td>Observability</td><td><strong>Some call analytics layer</strong> — possibly home-grown or via LiveKit Cloud's analytics</td><td>Panos podcast: customer onboarding involves analysing prior call recordings to baseline performance.</td></tr>
+          <tr><td>Data</td><td>A <strong>call-history store</strong> with transcripts + metadata, queryable for the CHM vision</td><td>"CRM of the future isn't a CRM" blog post explicitly describes this.</td></tr>
+        </tbody>
+      </table>
+
+      <h3><span class="tag likely">likely</span> Likely (best guess; validate in person)</h3>
+      <ul>
+        <li>A <strong>per-customer knowledge base</strong> loaded at call time — could be RAG over a small curated set (more like cache-augmented than vector retrieval, similar to your Eugenix CP2 design) or just prompt-injected.</li>
+        <li>A <strong>scenario / dialog policy layer</strong> that encodes "the business logic unique to every field service company" (per Blackbird notes). This is where their differentiation lives — generic LLMs don't understand "no heat, no hot water = drop everything."</li>
+        <li>An <strong>eval harness</strong> built from real customer call transcripts. Panos describes it: "We use these to prompt and build custom evaluation sets… we even select the best agent voices based on sentiment analysis of previous calls."</li>
+        <li>A <strong>scheduling/queue engine</strong> for outbound campaigns (Appointment Confirmation, Sales Executive) — likely Temporal, Sidekiq, Celery, or custom.</li>
+      </ul>
+
+      <div class="callout">
+        <p>If your prototype mirrors this exact shape — LiveKit Agents + Deepgram + ElevenLabs + GCP Cloud Run + a tool layer that talks to a fake FSM — you'll be speaking to them in their own architecture.</p>
+      </div>
+    </section>
+
+    <!-- 7 -->
+    <section class="section" id="sec-7">
+      <h2><span class="num">7</span>Customer Evidence</h2>
+
+      <p>Named customers (with what's publicly known):</p>
+
+      <table>
+        <thead><tr><th>Customer</th><th>Vertical</th><th>Systems</th><th>What they run</th><th>Stats</th></tr></thead>
+        <tbody>
+          <tr><td><strong>James Frew Ltd</strong></td><td>Gas/property (Scotland)</td><td>Simpro</td><td>Daytime CSR ("Jamie")</td><td>500+ calls/day; 80% of daily calls; 10k+ monthly calls baseline</td></tr>
+          <tr><td><strong>GasCare Group</strong></td><td>Gas/electric/cleaning (Manchester)</td><td>Commusoft</td><td>All 6 agents (OOH "Kate", Appointment, Daytime CSR + more)</td><td>30% admin reduction; &gt;40% no-access reduction; 100% increase in OOH bookings; ~3,000 calls/month</td></tr>
+          <tr><td><strong>Amax Fire &amp; Security</strong></td><td>Fire/security (London)</td><td>Simpro</td><td>OOH, Appointment, Daytime</td><td>30% technical calls fully autonomous; 100% emergency call answer rate; ~2,000 calls/month</td></tr>
+          <tr><td><strong>Custom Heat</strong></td><td>Heating</td><td>—</td><td>OOH and others</td><td>Public testimonial</td></tr>
+          <tr><td><strong>H2 Property Services</strong></td><td>Property services</td><td>—</td><td>Daytime + Appointment</td><td>"Booking a lot of new appointments we'd previously missed"</td></tr>
+          <tr><td><strong>AB Electrical</strong></td><td>Electrical</td><td>—</td><td>Phone system with full recording</td><td>Public testimonial</td></tr>
+          <tr><td><strong>Hey Electrics</strong> (GasCare division)</td><td>Electrical</td><td>—</td><td>Likely runs on the same agents as GasCare</td><td>Logo on site</td></tr>
+          <tr><td><strong>Diamond Green Energy</strong></td><td>Energy</td><td>—</td><td>Logo on site, called out by Welcome to the Jungle</td><td>—</td></tr>
+          <tr><td><strong>APG</strong></td><td>—</td><td>—</td><td>Logo on site</td><td>—</td></tr>
+          <tr><td><strong>Aquila</strong></td><td>—</td><td>—</td><td>Sales Agent feedback partner</td><td>—</td></tr>
+          <tr><td><strong>Origin</strong></td><td>—</td><td>—</td><td>Logo on site</td><td>—</td></tr>
+        </tbody>
+      </table>
+
+      <p>Headline metric per Blackbird (Jan 2026): <strong>15+ customers, 0% churn, 95% CSAT</strong> in less than 10 months since the trades pivot.</p>
+
+      <h3>What customers say repeatedly</h3>
+      <ul>
+        <li><strong>Speed to answer / never miss a call</strong> — most quoted benefit.</li>
+        <li><strong>Cost per booking goes down</strong> — engineers stay in the field; office team shrinks (or grows the business with the same headcount).</li>
+        <li><strong>The agents sound polite and professional</strong> — explicitly called out by multiple customers, suggests TTS quality matters and they take voice selection seriously.</li>
+        <li><strong>The CRM integration is what makes it real</strong> — "no ripping out systems that work."</li>
+      </ul>
+    </section>
+
+    <!-- 8 -->
+    <section class="section" id="sec-8">
+      <h2><span class="num">8</span>Strategic Positioning — the "CHM" North Star</h2>
+
+      <p>The single most important strategic post on their blog is "The CRM of the future isn't a CRM." Read it once before the on-site. The argument:</p>
+
+      <ul>
+        <li>Traditional CRMs try to impose structured fields on inherently unstructured human conversation. They get bloated.</li>
+        <li>A <strong>CHM (Communication History Management)</strong> system stores the raw conversation history — voice, email, chat, text — and treats that as the source of truth.</li>
+        <li>Once you have that substrate, you can "vibe your CHM" — query it in natural language: <em>"find everyone who sounded unsure at price quote and proactively send a discount."</em></li>
+      </ul>
+
+      <p>Why this matters strategically:</p>
+      <ul>
+        <li><strong>The voice agents are the data-collection layer.</strong> Each call generates structured + unstructured data flowing into the CHM.</li>
+        <li><strong>The CHM is the durable moat.</strong> Field service businesses can't easily leave once their entire customer interaction history lives in Elyos.</li>
+        <li><strong>The next products are about querying / acting on that history</strong> — proactive outreach, churn detection, customer segmentation, performance analytics.</li>
+      </ul>
+
+      <p>This reframes what they sell from "AI receptionist" to "communication operating system for trades." Your prototype is a much better fit if you nod to this — e.g., end the call with a structured summary that flows somewhere useful, demonstrate awareness that the call transcript is data.</p>
+    </section>
+
+    <!-- 9 -->
+    <section class="section" id="sec-9">
+      <h2><span class="num">9</span>Competitive Landscape</h2>
+
+      <p>The market splits into three tiers. Elyos lives at the intersection of #1 and #3.</p>
+
+      <h3>Tier 1 — Vertical AI CSR for trades / home services</h3>
+      <p>Direct competitors. Customer overlap is real.</p>
+      <table>
+        <thead><tr><th>Competitor</th><th>Geography</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Hatch</strong></td><td>US</td><td>"Complete AI CSR" — voice + SMS + email. Inbound today, outbound EOY 2025. Larger surface than Elyos but US-centric.</td></tr>
+          <tr><td><strong>Rosie</strong></td><td>US</td><td>HVAC/plumbing focus, lighter weight.</td></tr>
+          <tr><td><strong>Goodcall</strong></td><td>US</td><td>Started 2021; small business focus, $59–99/month. Less deep integration.</td></tr>
+          <tr><td><strong>AgentZap</strong></td><td>US</td><td>Plumber-specific; ServiceTitan integration.</td></tr>
+          <tr><td><strong>ConvexAI</strong></td><td>UK</td><td>Direct UK competitor; less mature; small B2B.</td></tr>
+          <tr><td><strong>Allo</strong> (US)</td><td>US</td><td>Phone system + AI receptionist combined, launched 2024.</td></tr>
+        </tbody>
+      </table>
+      <p><strong>Elyos's positioning vs. Tier 1:</strong> Deeper FSM integrations across <strong>multiple</strong> trades CRMs (not just ServiceTitan); UK-native with US expansion; founders with real ops backgrounds.</p>
+
+      <h3>Tier 2 — Horizontal AI voice platforms / infra</h3>
+      <p>Customers could build vs. buy using these. They're competitors and potential dependencies.</p>
+      <table>
+        <thead><tr><th>Platform</th><th>Role</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Vapi</strong></td><td>Managed voice agent platform; ~5 min setup. Trade-off: less customisation.</td></tr>
+          <tr><td><strong>Retell AI</strong></td><td>Similar to Vapi; production-ready voice agents.</td></tr>
+          <tr><td><strong>Bland</strong></td><td>Outbound-first; campaign management; carrier-grade telephony.</td></tr>
+          <tr><td><strong>LiveKit (Agents)</strong></td><td>Open-source SFU + agent framework. Elyos almost certainly builds on this.</td></tr>
+          <tr><td><strong>Pipecat</strong></td><td>Python orchestration framework (by Daily). Alternative to LiveKit Agents.</td></tr>
+          <tr><td><strong>PolyAI</strong></td><td>UK enterprise; multilingual; contact-centre focus.</td></tr>
+        </tbody>
+      </table>
+      <p>Elyos's positioning vs. Tier 2: <strong>vertical depth + integrations they can't replicate</strong>. They use platforms like LiveKit as ingredients, not competition.</p>
+
+      <h3>Tier 3 — Generic AI receptionist services</h3>
+      <table>
+        <thead><tr><th>Player</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Smith.ai</strong></td><td>Hybrid AI + human receptionists.</td></tr>
+          <tr><td><strong>Dialzara</strong></td><td>SMB-focused AI answering.</td></tr>
+          <tr><td><strong>SkipCalls / MyAIFrontDesk</strong></td><td>Cheap, mass-market.</td></tr>
+          <tr><td><strong>Slang.ai</strong></td><td>Restaurant-specialised (not trades).</td></tr>
+          <tr><td><strong>PolyAI</strong></td><td>Enterprise voice (different segment).</td></tr>
+          <tr><td><strong>Sierra</strong></td><td>Bret Taylor's enterprise AI agent platform.</td></tr>
+        </tbody>
+      </table>
+      <p><strong>Elyos's positioning vs. Tier 3:</strong> Built for the trade workflow specifically, not a horizontal receptionist with vertical skinning.</p>
+
+      <div class="callout warn">
+        <h4>Threats they probably worry about</h4>
+        <ul>
+          <li><strong>ServiceTitan launching their own AI voice agents natively</strong> — this is the single biggest existential risk, given ServiceTitan's distribution. Watch this space.</li>
+          <li><strong>Hatch / Sera or a well-funded US player entering the UK.</strong> Hatch in particular has a similar shape and bigger US footprint.</li>
+          <li><strong>Customers building DIY</strong> on Vapi/Retell once those mature. Elyos's CHM + integration story is the bet against this.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 10 -->
+    <section class="section" id="sec-10">
+      <h2><span class="num">10</span>What the Series A is paying for — inferred priorities</h2>
+
+      <p>Based on the funding announcement, the careers page, and what's missing from the product surface, here's where I'd bet the money is going:</p>
+
+      <h3>A. Engineering depth (highest budget)</h3>
+      <ul>
+        <li><strong>Reliability at scale</strong> — moving from 15 customers to 100+ requires infrastructure investment. Concurrent calls, multi-tenant isolation, observability.</li>
+        <li><strong>More CRM connectors</strong> — Field Edge, Jobber, BigChange, Tradify, Workiz, Housecall Pro.</li>
+        <li><strong>Email + WhatsApp agents</strong> as first-class products (not just notification channels), per the Series A post.</li>
+        <li><strong>The CHM substrate</strong> — a queryable conversation history platform with analytics, segmentation, "vibe" search.</li>
+      </ul>
+
+      <h3>B. Vertical depth</h3>
+      <ul>
+        <li>Better domain models for fault diagnosis (gas, electric, HVAC, fire — they already trained on plumbing/electrics; expand).</li>
+        <li>More dialog policies per-customer (so the agent knows your specific pricing, SLAs, on-call rota, area coverage).</li>
+        <li>Onboarding automation — getting a new customer live in days, not weeks. Per Panos, they currently embed deeply with each customer.</li>
+      </ul>
+
+      <h3>C. International expansion</h3>
+      <ul>
+        <li>Stated 2026 goal. UK + US already partially. Likely Australia (Blackbird's home), Netherlands, DACH.</li>
+        <li>This will need multilingual voice — already a known feature gap they don't currently market.</li>
+      </ul>
+
+      <h3>D. New agent capabilities</h3>
+      <ul>
+        <li>Almost certain: <strong>outbound sales / lead routing agents</strong> with more sophistication (Hatch is shipping outbound EOY 2025; Elyos will need to match).</li>
+        <li>Possibly: <strong>AI supervisor / coaching</strong> of human agents.</li>
+        <li>Possibly: <strong>WhatsApp agents</strong> that mirror voice agents.</li>
+      </ul>
+
+      <h3>E. Go-to-market</h3>
+      <ul>
+        <li>They mention this directly in the Series A post. Don't worry about it for your prototype — but the engineering you build should be <strong>demo-able to a non-technical buyer</strong>, because GTM is who you'll ultimately serve.</li>
+      </ul>
+    </section>
+
+    <!-- 11 -->
+    <section class="section" id="sec-11">
+      <h2><span class="num">11</span>Logical Next Features (the prototype menu)</h2>
+
+      <p>This is the section that should drive your prototype. Each feature below is a plausible "next thing Elyos wants to build". I've rated each on three axes: how clearly it serves their stated priorities, how cleanly it demos in 1–2 days, and how distinctive it'd be for you (i.e., not 100 candidates will think of it).</p>
+
+      <table>
+        <thead><tr><th>#</th><th>Feature idea</th><th>Why they'd want it</th><th>Demo in 2 days</th><th>Distinctive-ness</th><th>Rec</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td><strong>Concurrent-call orchestrator</strong> — one agent process handling N concurrent calls with per-call state, tool-call cancellation, and graceful timeout/retry.</td><td>They explicitly mentioned "100 concurrent voice calls" in the on-site system-design section. Daytime CSR claims "unlimited concurrent".</td><td class="center stars">★★★</td><td class="center stars">★★★</td><td>Strong</td></tr>
+          <tr><td>2</td><td><strong>Voice-version of the take-home</strong> — same streaming + tool calling + cancellation, but via mic + Deepgram + ElevenLabs.</td><td>Direct extension of what they're already going to test you on. The on-site explicitly says "add real-time audio input — we'll provide the STT integration."</td><td class="center stars">★★★★★</td><td class="center stars">★★★★</td><td><strong>★ Anchor</strong></td></tr>
+          <tr><td>3</td><td><strong>Tool-routing layer with mid-call cancellation</strong> — LLM kicks off slow research, user cuts it, system surfaces partial result and continues conversation.</td><td>The take-home is <em>exactly</em> this in CLI form. Showing it in voice form is the natural step up.</td><td class="center stars">★★★★</td><td class="center stars">★★★★</td><td><strong>★ Anchor</strong></td></tr>
+          <tr><td>4</td><td><strong>CHM substrate prototype</strong> — log every call as structured + raw transcript, write a small natural-language query layer ("show me calls where the customer sounded unsure on price").</td><td>Maps directly to the CRM-of-the-future post — their North Star.</td><td class="center stars">★★</td><td class="center stars">★★★★★</td><td>High-risk, high-reward</td></tr>
+          <tr><td>5</td><td><strong>Customer onboarding kit</strong> — given N prior call recordings, auto-generate (a) common intent taxonomy, (b) starter system prompt, (c) eval set.</td><td>Panos explicitly described this in the Deepgram podcast as their actual onboarding workflow.</td><td class="center stars">★★</td><td class="center stars">★★★★★</td><td>Best "I get how you actually operate" play</td></tr>
+          <tr><td>6</td><td><strong>Engineer assistant prototype</strong> — voice-callable "AI dispatcher" that lets an engineer in the field update a job by voice.</td><td>Field Engineer Assistant is the least demoed of their six products and the most differentiated.</td><td class="center stars">★★★</td><td class="center stars">★★★★</td><td>Strong if you want to surprise</td></tr>
+          <tr><td>7</td><td><strong>Multilingual voice agent</strong> (English + 1 second language) — switching language mid-call, retaining context.</td><td>International expansion priority. You already shipped this at Eugenix (Hindi/Tamil/English).</td><td class="center stars">★★★★</td><td class="center stars">★★★★</td><td>Easy win given Eugenix codebase</td></tr>
+          <tr><td>8</td><td><strong>Supervisor / human handoff</strong> — at the right moment, escalate from AI to a human, with clean context handoff.</td><td>Real-world need; Daytime CSR already has "transfer when needed."</td><td class="center stars">★★★</td><td class="center stars">★★★</td><td>Good complement</td></tr>
+          <tr><td>9</td><td><strong>Live transcription + intent classifier</strong> on a call, surfacing in a sidebar in real time.</td><td>They use sentiment analysis at onboarding; live version is the next step.</td><td class="center stars">★★★</td><td class="center stars">★★★</td><td>Nice demo polish</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout good">
+        <h4>What I'd recommend you actually build</h4>
+        <p>Combine <strong>#2 + #3 + #1</strong> as the core, with a sprinkle of <strong>#7</strong> and <strong>#4</strong> for narrative.</p>
+        <p>In plain English: build a <strong>voice version of the take-home</strong> that does streaming LLM with tool calling, where the slow tool is a "lookup customer history in the CHM" (mocked), with cancellation working over voice (the user interrupts mid-search), partial results preserved, and a tiny CHM log that you can query at the end. Architect it so it can run multiple concurrent calls. Use the same APIs they gave you (their <code>weather</code> + <code>research</code> endpoints) so the on-site can immediately see how you'd take your voice extension and plug it into the real take-home flow. Optional polish: support two languages.</p>
+        <p>Why this exact combination wins:</p>
+        <ul>
+          <li><strong>It's clearly the take-home, evolved.</strong> Every architectural decision in your CLI carries forward, so they can grade both at once.</li>
+          <li><strong>It teaches them you understand the on-site direction.</strong> Concurrent tool calls, audio I/O, context management — the three pair-programming directions they explicitly listed.</li>
+          <li><strong>It demonstrates production thinking.</strong> Cancellation across stream + voice + tool is genuinely hard. Doing it cleanly in 2 days shows seniority.</li>
+          <li><strong>It earns the "CHM" line.</strong> Even a 10-line mock of a structured call log demonstrates you read their blog and got the strategy.</li>
+        </ul>
+        <p>I'll give detailed prototype guidance in §13.</p>
+      </div>
+    </section>
+
+    <!-- 12 -->
+    <section class="section" id="sec-12">
+      <h2><span class="num">12</span>The Take-Home Itself — what to lock down</h2>
+
+      <p>Before you build anything beyond the take-home, nail this. Quick read of what they explicitly score:</p>
+
+      <h3>Three evaluation criteria, in their own words</h3>
+      <ol>
+        <li><strong>Implementation quality</strong> — streaming works, both tools work, pending state is clear, cancellation actually cancels, errors handled, code clear in 5 minutes.</li>
+        <li><strong>API discovery &amp; handling</strong> — they say this is <strong>"particularly important."</strong> They've planted undocumented quirks in the weather + research APIs. Your job is to find them, handle them gracefully, document what you found.</li>
+        <li><strong>Communication</strong> — Loom video clear, you discuss trade-offs, you're honest about weaknesses.</li>
+      </ol>
+
+      <h3>Things to be deliberate about</h3>
+      <ul>
+        <li><strong>Target size: 150–250 LOC.</strong> Past 400 = over-engineering, per the doc.</li>
+        <li><strong>Conversation history maintained across turns.</strong> Mentioned in must-haves.</li>
+        <li><strong>Cancellation must actually free resources and return partial results if mid-stream.</strong> Mentioned in nice-to-haves but it's the deepest test.</li>
+        <li><strong>Loom video API-discovery section is the most important.</strong> Spend disproportionate time on it. They want to see investigative thinking, not polished slides.</li>
+        <li><strong>Include your AI-assistant transcript</strong> (<code>/export</code>) if you used Claude Code / Cursor / Copilot. They explicitly want it. Don't hide it.</li>
+      </ul>
+
+      <h3>The "quirks" — what to probe for</h3>
+      <p>They won't tell you, but typical traps in API mocks like this include:</p>
+      <ul>
+        <li>Intermittent 5xx / 429 / 500-with-200 mismatches.</li>
+        <li>Variable latency on <code>/research</code> (3–8s stated; might occasionally exceed).</li>
+        <li>Inconsistent response schemas (e.g., <code>location</code> sometimes returns <code>city</code>, sometimes object).</li>
+        <li>Special inputs that crash (empty string, unicode, very long, SQL-injection-style).</li>
+        <li>Returns that look successful but contain garbage / error in body.</li>
+        <li>Rate limits not in the docs.</li>
+        <li>Stale caching on identical queries.</li>
+        <li>Timeouts that hang vs. error.</li>
+      </ul>
+      <p>Probe systematically, document what you found, handle each intentionally.</p>
+
+      <h3>On the LLM provider</h3>
+      <p>Use OpenAI or Anthropic SDK directly. Don't reach for LangChain/LangGraph — it'll bloat past 400 LOC. Direct SDK + a thin tool loop is what they want to see.</p>
+    </section>
+
+    <!-- 13 -->
+    <section class="section" id="sec-13">
+      <h2><span class="num">13</span>The Prototype — concrete recommendation</h2>
+
+      <p><strong>Time budget:</strong> weekend (1–2 days). <strong>Goal:</strong> something polished and crisp that demoes in 5 minutes, not a sprawling system.</p>
+
+      <h3>Recommended scope</h3>
+      <p><strong>Working title:</strong> <em>Streaming voice CLI — same shape as the take-home, but you can talk to it.</em></p>
+
+      <p><strong>Functionality:</strong></p>
+      <ol>
+        <li>Speak into your laptop mic → Deepgram streaming STT.</li>
+        <li>Streamed transcript → LLM (OpenAI or Anthropic) with tool calling.</li>
+        <li>Two tools wired up:
+          <ul>
+            <li><code>get_weather</code> (same endpoint they gave you).</li>
+            <li><code>lookup_customer_history</code> — calls their <code>/research</code> endpoint (treat it as your slow "CHM lookup"). 3–8 second pending state.</li>
+          </ul>
+        </li>
+        <li><strong>TTS streaming back</strong> via ElevenLabs while LLM is responding.</li>
+        <li><strong>Cancellation:</strong> spoken keyword ("stop", "cancel", "wait") or Ctrl-C interrupts the in-flight slow tool, returns to listening, preserves partial response.</li>
+        <li><strong>Pending state:</strong> an audible "let me look that up for you, one moment" while research is in flight (this is what voice-agent customers expect; the silent-pause UX in CLI is unacceptable in voice).</li>
+        <li><strong>Concurrent calls:</strong> structure the code so a second concurrent "call" (a second mic source, or a simulated WebSocket) can run alongside — even if you don't fully wire two real mics, prove it architecturally.</li>
+        <li><strong>Tiny CHM log:</strong> every utterance gets logged as <code>{call_id, timestamp, speaker, transcript, tool_calls, sentiment_guess}</code> to a local JSON file. After the call, demo a one-line <code>query</code> command: <code>python query.py "calls where the user cancelled"</code> → returns the matching entries.</li>
+      </ol>
+
+      <h3>Stack to use (you already know all of this)</h3>
+<pre><code>Python 3.12 (asyncio throughout)
+deepgram-sdk (streaming STT)
+elevenlabs (streaming TTS)
+openai or anthropic (LLM with tools)
+sounddevice / pyaudio (mic capture)
+fastapi (optional — for concurrent call simulation via WebSocket)</code></pre>
+
+      <p><strong>Skip:</strong> LangChain, LangGraph, frameworks, voice-agent platforms. The point is to show you can wire the primitives yourself.</p>
+      <p><strong>Consider:</strong> importing <code>livekit-agents</code> only if you want to make the LiveKit angle explicit. It would land beautifully given Panos's GitHub. But it adds setup overhead. Trade-off you control.</p>
+
+      <h3>File layout (aim for ~250–400 LOC total)</h3>
+<pre><code>voice_cli/
+  __init__.py
+  main.py            # entry point, runs one concurrent call
+  audio.py           # mic capture, speaker playback
+  stt.py             # Deepgram streaming wrapper
+  tts.py             # ElevenLabs streaming wrapper
+  llm.py             # LLM client + tool loop + cancellation
+  tools.py           # weather + research wrappers (their APIs)
+  chm.py             # tiny call-log writer + query
+  scripts/
+    query.py         # post-call CHM query CLI
+README.md            # what you built, why, what surprised you
+DISCOVERIES.md       # API quirks you found in the take-home</code></pre>
+
+      <h3>What to <em>say</em> in your demo (so the prototype tells a story)</h3>
+      <ol>
+        <li><em>"The take-home is a CLI streaming chat with tool calling and cancellation. The on-site notes you'd want to add real-time audio, concurrent tool calls, and context management. I figured I'd just… do that, so we have something to talk to."</em></li>
+        <li><em>"Here's a normal voice call — weather lookup, streams back in real time."</em></li>
+        <li><em>"Here's the slow tool — pending state via audible prompt because silence is unacceptable in voice."</em></li>
+        <li><em>"Watch me interrupt it mid-lookup — partial result preserved, conversation continues."</em></li>
+        <li><em>"I noticed your blog post about CHM, so every utterance is logged. Here's a one-line query that surfaces moments matching a vibe."</em></li>
+        <li><em>"Concurrent-call simulation: two mic inputs, no shared state, clean isolation."</em></li>
+        <li><em>"Things I'd do with more time: …" (this echoes the take-home self-critique requirement, and shows you stayed honest about scope).</em></li>
+      </ol>
+
+      <div class="callout warn">
+        <h4>Hard rules for the build</h4>
+        <ul>
+          <li><strong>Don't break the take-home.</strong> Keep the original CLI fully working and commit it cleanly first. The prototype is the <em>extension</em>, not a replacement.</li>
+          <li><strong>Stay under 1000 LOC for the prototype.</strong> Past that you're showing them you don't know how to scope under time pressure.</li>
+          <li><strong>Record the demo Loom while everything is fresh.</strong> Don't try to do it Sunday night exhausted.</li>
+          <li><strong>Include your Claude Code / Cursor session export</strong> for both parts. They specifically asked.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 14 -->
+    <section class="section" id="sec-14">
+      <h2><span class="num">14</span>Strategy for the On-Site (2.5 hrs)</h2>
+
+      <p>Re-reading the take-home doc carefully:</p>
+
+      <h3>Part 1 — Code Discussion (30–45 min)</h3>
+      <p>They'll ask:</p>
+      <ul>
+        <li><em>Walk us through cancellation</em> — be ready to talk about asyncio task cancellation, partial state, idempotency.</li>
+        <li><em>What if user cancels mid-LLM-stream while research is still running?</em> — practice this answer.</li>
+        <li><em>Specific API quirk you found</em> — have at least 3 ready, ranked by how hard they were to find.</li>
+        <li><em>Retry logic with backoff</em> — be ready to whiteboard exponential backoff with jitter, distinguish idempotent vs non-idempotent retries.</li>
+      </ul>
+
+      <h3>Part 2 — Pair Programming (75 min)</h3>
+      <p>They'll extend it toward one of three directions. <strong>All three are things you've already shipped in Eugenix CP2 or could prototype this weekend:</strong></p>
+      <ul>
+        <li><em>Real-time audio input</em> — already in your prototype.</li>
+        <li><em>Concurrent tool calls</em> — practice this; have a clean mental model for "one LLM call, multiple tools in parallel" vs "agent loop with sequential calls."</li>
+        <li><em>Conversation memory / context management</em> — this is your wheelhouse; bring up retrieval-light vs. cache-augmented vs. full-history strategies.</li>
+      </ul>
+      <p>Style points (per the doc):</p>
+      <ul>
+        <li><em>Ask clarifying questions</em> — they explicitly value this. Don't dive in.</li>
+        <li><em>Explain your thinking</em> — narrate.</li>
+        <li><em>Show clean code under pressure.</em></li>
+      </ul>
+
+      <h3>Part 3 — System Design (45 min)</h3>
+      <p>The three questions they list:</p>
+      <ol>
+        <li><em>"100 concurrent voice calls"</em> — be ready to draw the picture. Telephony front (Twilio/SIP) → load-balanced media gateway (LiveKit) → per-call agent worker (containerised) → shared LLM/STT/TTS clients (rate-limited, multiplexed) → tool services → CRM proxy → call log store. Where bottlenecks live: LLM latency tail, TTS chunk latency, STT cold start, FSM API rate limits.</li>
+        <li><em>"What breaks first? How would you monitor it?"</em> — pick something specific and credible (e.g., "TTS latency tail under concurrent fanout; I'd monitor p95 first-audio-frame latency per call, alert on 1500ms.").</li>
+        <li><em>"Walk me through a request from mic input to speaker output — where's the latency?"</em> — they want this drawn end-to-end. Practice this. The honest answer: ~70ms STT cold latency, ~600ms LLM first token, ~200ms TTS first chunk, ~100ms network + jitter = ~1s perceived. Talk about what you can parallelize (kicking off TTS as soon as first phrase of LLM is available, etc.).</li>
+      </ol>
+      <p>This is exactly the kind of conversation your Sembly + Eugenix work lets you have.</p>
+
+      <h3>Cultural / soft notes</h3>
+      <ul>
+        <li>They explicitly say "<em>Senior engineers ask good questions</em>." Walk in with 4–6 questions of your own (see §16 below).</li>
+        <li>They say "<em>Being thorough matters more than perfect code</em>" — bias to thoroughness in your Loom and on-site narrative.</li>
+        <li>"<em>Show a bug, explain how you'd fix it</em>" beats hiding it. Don't paper over things.</li>
+      </ul>
+    </section>
+
+    <!-- 15 -->
+    <section class="section" id="sec-15">
+      <h2><span class="num">15</span>Implications for <em>you</em> specifically (Anna)</h2>
+
+      <p>A few things specific to your profile that this research surfaced:</p>
+
+      <h3>Strengths you should foreground</h3>
+      <ul>
+        <li><strong>You already shipped this exact shape at Eugenix CP2.</strong> Twilio + ElevenLabs + LiteLLM + FastAPI + multilingual + structured scripts + escalation flagging + grounded knowledge base. Almost 1:1 match to Elyos's product anatomy.</li>
+        <li><strong>You have shipped voice + multi-agent + production at scale before</strong> (Dr. Credit, ~200K users/month, 90% per-unit cost reduction). That's <em>exactly</em> the kind of unit-economics conversation that founding engineers at a Series A trades-AI startup have weekly.</li>
+        <li><strong>You're employee-#5-at-Sembly seasoned.</strong> They explicitly say they want people who "own complex systems end-to-end without hand-holding." Tell that story plainly.</li>
+      </ul>
+
+      <h3>Things to defang upfront</h3>
+      <ul>
+        <li><strong>PhD framing risk</strong> — covered last conversation. Keep the framing "shipping engineer who happens to have a PhD," not "researcher."</li>
+        <li><strong>"Trades domain newness"</strong> — you haven't worked in this vertical. Acknowledge it honestly; couple with "but the operational shape is identical to what I shipped in healthcare." Reuse their own argument from the founder blog ("AI that gets it" = domain expertise embedded into product) — your Eugenix work demonstrates exactly this transfer.</li>
+        <li><strong>K8s / distributed systems</strong> — JD lists it as bonus. CV mentions Docker + GCP/AWS/CI/CD but doesn't lead with K8s. If they probe, be honest about depth; you can talk through architecture but might not have shipped at K8s scale. That's fine — they're hiring a founding engineer, not a platform engineer.</li>
+      </ul>
+
+      <div class="callout good">
+        <h4>Your interview superpower</h4>
+        <p>Their entire onboarding workflow, per Panos's Deepgram podcast, is: <em>take a customer's prior call recordings → derive baselines → build a starter system prompt → build a custom eval set → pick agent voice via sentiment analysis on past calls.</em> That is <strong>literally</strong> the workflow you ran for Eugenix CP2 (system prompt grounded in curated content cache, scripted per recovery day, eval set tied to call recordings). If they ask you "how would you onboard a new customer", you have a complete, lived answer. Practice articulating it as a clean four-step playbook.</p>
+      </div>
+    </section>
+
+    <!-- 16 -->
+    <section class="section" id="sec-16">
+      <h2><span class="num">16</span>Questions to ask them</h2>
+
+      <p>Smart engineers ask good questions. The doc says it twice. Here are six worth bringing — choose 2–3 depending on time, and adjust phrasing for HR vs. technical:</p>
+
+      <ol>
+        <li><em>"How do you think about the trade-off between LiveKit's flexibility and a managed platform like Vapi or Retell as you scale to 100+ concurrent calls per customer?"</em> — signals you know the landscape and Panos's apparent stack choice.</li>
+        <li><em>"On the CHM vision — how far along is the substrate? Is it powering anything live today, or is it still mostly a strategic frame?"</em> — shows you read the blog, lets them tell you where they really are.</li>
+        <li><em>"What does onboarding look like for a new customer right now — from signed contract to first live call? What's the biggest bottleneck?"</em> — they care about this; it's where Series A engineering hires get pointed.</li>
+        <li><em>"How are you handling per-customer prompt / dialog policy versioning? Especially when a customer wants to tweak something live without redeploying."</em> — production-seriousness signal.</li>
+        <li><em>"You mentioned email and messaging as new modalities in the Series A post. Is the same agent runtime, or separate stacks per modality?"</em> — architectural curiosity, shows you're thinking about their future.</li>
+        <li><em>"What's the single thing you most wish your next founding engineer brought on day one?"</em> — straightforward, useful, hard to fake.</li>
+      </ol>
+    </section>
+
+    <!-- 17 -->
+    <section class="section" id="sec-17">
+      <h2><span class="num">17</span>Open risks and uncertainties</h2>
+
+      <p>Things I couldn't fully verify, that you should be ready to update on:</p>
+
+      <ul>
+        <li><strong>LiveKit vs. Pipecat vs. custom.</strong> Panos's <code>livekit/agents</code> fork is strong evidence for LiveKit but doesn't conclusively prove it's in production. Could be exploratory. Validate by asking.</li>
+        <li><strong>Twilio.</strong> Almost certainly used given the LiveKit pairing and UK trades market. Not formally confirmed.</li>
+        <li><strong>Database stack for CHM.</strong> Could be Postgres + pg_vector, could be a dedicated vector store, could be Snowflake + LLM index. Worth asking.</li>
+        <li><strong>Email and messaging maturity.</strong> Series A post mentions them as "new agent capabilities" — likely early in build.</li>
+        <li><strong>International expansion timing.</strong> "2026" stated; specifics unknown.</li>
+        <li><strong>Whether the take-home pair-programming session will use your prototype or theirs.</strong> I'd guess theirs (their CLI codebase), but your prototype is the <em>narrative</em>, not necessarily the artifact you'll edit on the day.</li>
+      </ul>
+    </section>
+
+    <!-- 18 -->
+    <section class="section" id="sec-18">
+      <h2><span class="num">18</span>TL;DR if you only read one page</h2>
+
+      <div class="callout tldr">
+        <ul>
+          <li><strong>What Elyos sells:</strong> Six AI voice agents for UK trades/field services, deeply integrated with FSM CRMs. £13M Series A in Jan 2026; 20 people; ~15+ customers, 0% churn, 95% CSAT.</li>
+          <li><strong>What they're really building:</strong> A "Communication History Management" substrate that becomes the operating system for field services. Voice agents are the data-collection layer; the platform is the moat.</li>
+          <li><strong>Tech stack (high confidence):</strong> Deepgram STT + ElevenLabs TTS + OpenAI/Anthropic LLM + Python/TypeScript + GCP. <strong>Almost certainly LiveKit Agents + Twilio</strong> (Panos's GitHub forks LiveKit's repo).</li>
+          <li><strong>What the take-home tests:</strong> Streaming + tool calling + pending states + cancellation + API quirk discovery. ~150–250 LOC. The "API discovery" section is weighted highest.</li>
+          <li><strong>What the on-site extends toward:</strong> Voice I/O, concurrent tool calls, context management, 100 concurrent voice calls. This is your home turf from Eugenix CP2.</li>
+          <li><strong>Recommended prototype:</strong> Voice version of the take-home — same APIs, same shape, but mic in + speaker out via Deepgram + ElevenLabs, with cancellation and a tiny CHM log. ~250–400 LOC over the weekend.</li>
+          <li><strong>Your superpower:</strong> You've already shipped Elyos's exact onboarding workflow at Eugenix CP2. Practice articulating it.</li>
+          <li><strong>What to ask:</strong> LiveKit / managed platform trade-off; CHM substrate maturity; onboarding bottleneck; per-customer prompt versioning.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Sources -->
+    <section class="section" id="sources">
+      <h2><span class="num">★</span>Sources</h2>
+
+      <h3>Elyos primary</h3>
+      <ul class="sources">
+        <li><a href="https://elyos.ai/">Elyos AI — homepage</a></li>
+        <li><a href="https://elyos.ai/out-of-hours-ai-agent">Out-of-hours AI Agent</a></li>
+        <li><a href="https://elyos.ai/daytime-csr-ai-agent">Daytime CSR</a></li>
+        <li><a href="https://elyos.ai/sales-executive-ai-agent">AI Sales Executive</a></li>
+        <li><a href="https://elyos.ai/appointment-confirmation-ai-agent">Appointment Confirmation Agent</a></li>
+        <li><a href="https://elyos.ai/scheduling-ai-assistant">Scheduling AI Assistant</a></li>
+        <li><a href="https://elyos.ai/field-engineer-ai-agent">Field Engineer AI Assistant</a></li>
+        <li><a href="https://elyos.ai/integrations">Integrations</a></li>
+        <li><a href="https://elyos.ai/success-stories">Success Stories</a></li>
+        <li><a href="https://elyos.ai/blog">Blog index</a></li>
+        <li><a href="https://elyos.ai/blog/elyos-ai-raises-a-13m-series-a-to-build-ai-agents-trades">Series A announcement (Elyos blog)</a></li>
+        <li><a href="https://elyos.ai/blog/the-crm-of-the-future-isnt-a-crm">"The CRM of the future isn't a CRM"</a></li>
+        <li><a href="https://elyos.ai/blog/james-frew-handling-winter-demand-with-ai-agents">James Frew case study</a></li>
+        <li><a href="https://elyos.ai/blog/gascare-powering-growth-with-ai">GasCare case study</a></li>
+        <li><a href="https://elyos.ai/blog/amax-ai-for-fire-and-security">Amax case study</a></li>
+        <li><a href="https://elyos.ai/blog/a-note-from-the-founders">A note from the Founders</a></li>
+        <li><a href="https://elyos.ai/blog/meet-the-humans-behind-the-agents">Meet the Humans Behind the Agents</a></li>
+        <li><a href="https://elyos.ai/blog/ai-is-making-trades-unstoppable">AI is Going to Make Great Trades Businesses Unstoppable</a></li>
+        <li><a href="https://jobs.ashbyhq.com/elyos/10e9f208-0c44-4a3e-8aea-99442009f8a3">Founding Software Engineer JD</a></li>
+      </ul>
+
+      <h3>Investor / press</h3>
+      <ul class="sources">
+        <li><a href="https://www.blackbird.vc/blog/investment-notes-elyos">Blackbird Investment Notes: Elyos</a></li>
+        <li><a href="https://www.ycombinator.com/companies/elyos-ai">Y Combinator company page</a></li>
+        <li><a href="https://www.ycombinator.com/companies/elyos-ai/jobs">YC jobs page</a></li>
+        <li><a href="https://app.welcometothejungle.com/companies/Elyos-AI">Welcome to the Jungle (Otta)</a></li>
+        <li><a href="https://www.endeavor.org.gr/talks-and-takeways/built-for-real-needs-how-elyos-ai-built-applied-ai-that-works-in-the-real">Endeavor Greece — interview with Adrian</a></li>
+        <li><a href="https://thetechfounders.co.uk/news/elyos-ai-raises-13-million-in-funding-to-build-ai-agents-for-trades-and-field-services/">The Tech Founders — Series A coverage</a></li>
+        <li><a href="https://www.eu-startups.com/2026/01/yc-backed-uk-startup-elyos-ai-raises-e11-1-million-to-build-ai-agents-for-trades-and-field-services/">EU-Startups — €11.1M Series A</a></li>
+        <li><a href="https://www.soapbox.vc/feed/elyos-ai-10m-series-a">Soapbox.vc — Elyos £10M Series A</a></li>
+      </ul>
+
+      <h3>Founder content</h3>
+      <ul class="sources">
+        <li><a href="https://deepgram.com/podcast/ai-minds-075-panos-co-founder-cto-at-elyos-ai">Deepgram AI Minds #075 — Panos Stravopodis</a></li>
+        <li><a href="https://www.linkedin.com/in/pstrav/">Panos Stravopodis — LinkedIn</a></li>
+        <li><a href="https://github.com/pstrav">Panos Stravopodis — GitHub <code>pstrav</code></a> — note the <code>pstrav/agents</code> fork of <code>livekit/agents</code></li>
+        <li><a href="https://www.linkedin.com/in/adrian-johnston-87667a2b/">Adrian Johnston — LinkedIn</a></li>
+        <li><a href="https://www.linkedin.com/in/philippa-brown-/">Philippa Brown — LinkedIn</a></li>
+        <li><a href="https://www.endeavor.org.gr/entrepreneurs/panos-stravopodis">Endeavor Greece — Panos profile</a></li>
+      </ul>
+
+      <h3>Competitive / market</h3>
+      <ul class="sources">
+        <li><a href="https://www.usehatchapp.com/">Hatch — AI voice + SMS + email</a></li>
+        <li><a href="https://www.goodcall.com/">Goodcall</a></li>
+        <li><a href="https://convexai.co.uk/">ConvexAI (UK)</a></li>
+        <li><a href="https://www.assemblyai.com/blog/vapi-vs-pipecat-vs-livekit">Vapi / Retell / Bland / LiveKit / Pipecat — comparison</a></li>
+        <li><a href="https://softcery.com/lab/choosing-the-right-voice-agent-platform-in-2026">Voice agent platforms 2026 comparison (Softcery)</a></li>
+        <li><a href="https://github.com/livekit/agents">LiveKit Agents — GitHub</a></li>
+      </ul>
+
+      <h3>Take-home (attached)</h3>
+      <ul class="sources">
+        <li><em>Elyos Interview 2.0 — interview.md by Panos Stravopodis</em> (private gist, attached to this session)</li>
+      </ul>
+    </section>
+
+    <footer class="report-footer">
+      <p>Report generated 2026-05-15. Sources fetched live from public web pages and the attached take-home PDF. Treat all inferred items as working hypotheses — validate live where possible.</p>
+    </footer>
+
+  </main>
+</div>
+</body>
+</html>

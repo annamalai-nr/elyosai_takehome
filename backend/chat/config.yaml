@@ -1,0 +1,31 @@
+# Elyos take-home — configuration
+# Keep model selection config-driven (per north_stars.md rule 21).
+# Model names must come from backend/reference_docs/allowed_models.csv.
+
+elyos_api:
+  base_url: "https://elyos-interview-907656039105.europe-west2.run.app"
+  api_key_env: "ELYOS_API_KEY"   # name of the env var that holds the key
+  # Per the take-home PDF: only /weather and /research are documented.
+  # /health is undocumented but live (returns {"status":"healthy"}).
+  endpoints:
+    weather:  "/weather"          # GET, ~200 ms, query: location (string)
+    research: "/research"         # GET, 3-8 s,  query: topic (string)
+  request_timeout_seconds: 15     # explicit read timeout shorter than user deadline
+  # Hard cap on calls per probe run, to protect against accidental bursts.
+  probe_call_budget: 25
+
+llm:
+  # Use a single provider's official SDK for the chat app (per take-home: "OpenAI, Anthropic, or similar").
+  # Allowed names live in backend/reference_docs/allowed_models.csv.
+  model_name: "gpt-5.4-mini"
+  max_tokens: 1500
+  temperature: 0.0
+  reasoning_effort: "none"
+
+cli_chat:
+  # Pending-state phrase printed when a slow tool is in flight.
+  pending_phrase: "Researching {topic}... (Ctrl+C to cancel)"
+  # Maximum conversation turns retained in history (the take-home requires this be maintained).
+  max_history_messages: 40
+
+outputs_dir: backend/outputs

@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API Quirks Research v2 — Elyos Take-Home Preparation</title>
+<style>
+  :root {
+    --bg: #fafaf7;
+    --paper: #ffffff;
+    --ink: #1a1a1a;
+    --muted: #5c5c5c;
+    --rule: #e5e3dc;
+    --accent: #b94a1f;
+    --accent-soft: #fbe9df;
+    --highlight: #fff6d6;
+    --code-bg: #f3f1ec;
+    --good: #166534;
+    --good-soft: #dcfce7;
+    --warn: #92400e;
+    --warn-soft: #fef3c7;
+    --info: #1e40af;
+    --info-soft: #dbeafe;
+    --sky: #0c4a6e;
+    --sky-soft: #e0f2fe;
+    --purple: #6d28d9;
+    --purple-soft: #ede9fe;
+    --gray: #525252;
+    --gray-soft: #f5f5f4;
+    --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Times New Roman", Times, serif;
+    --font-mono: "SF Mono", Menlo, Monaco, Consolas, "Courier New", monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    gap: 0;
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+
+  aside {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 28px 20px 28px 28px;
+    border-right: 1px solid var(--rule);
+    background: var(--bg);
+  }
+  aside .brand { font-family: var(--font-serif); font-size: 20px; font-weight: 600; margin-bottom: 4px; color: var(--ink); }
+  aside .brand-sub { color: var(--muted); font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 6px; }
+  aside .version { display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); margin-bottom: 22px; }
+  aside nav ol { list-style: none; padding: 0; margin: 0; counter-reset: section; }
+  aside nav li { counter-increment: section; margin-bottom: 6px; }
+  aside nav a {
+    display: block;
+    padding: 6px 10px;
+    border-radius: 6px;
+    color: var(--ink);
+    text-decoration: none;
+    font-size: 13.5px;
+    line-height: 1.35;
+    border-left: 2px solid transparent;
+    transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+  }
+  aside nav a::before {
+    content: counter(section, decimal-leading-zero) "  ";
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    font-size: 11.5px;
+  }
+  aside nav a:hover { background: var(--accent-soft); color: var(--accent); border-left-color: var(--accent); }
+
+  main { padding: 48px 56px 96px; background: var(--paper); min-width: 0; }
+  header.title-block { margin-bottom: 36px; padding-bottom: 28px; border-bottom: 2px solid var(--ink); }
+  header.title-block h1 { font-family: var(--font-serif); font-size: 40px; line-height: 1.1; margin: 0 0 8px; letter-spacing: -0.01em; }
+  header.title-block .v-badge { display: inline-block; vertical-align: middle; margin-left: 12px; font-size: 14px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; padding: 4px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+  header.title-block .subtitle { color: var(--muted); font-size: 16px; font-style: italic; }
+  header.title-block dl { display: grid; grid-template-columns: max-content 1fr; column-gap: 18px; row-gap: 4px; margin: 22px 0 0; font-size: 14px; }
+  header.title-block dt { color: var(--muted); font-weight: 500; }
+  header.title-block dd { margin: 0; color: var(--ink); }
+
+  section { margin-bottom: 56px; }
+  section.section h2 {
+    font-family: var(--font-serif);
+    font-size: 28px;
+    line-height: 1.15;
+    margin: 0 0 18px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--rule);
+    letter-spacing: -0.01em;
+  }
+  section.section h2 .num { color: var(--accent); font-variant-numeric: tabular-nums; margin-right: 14px; font-size: 0.78em; font-weight: 500; }
+  h3 { font-family: var(--font-body); font-size: 19px; margin-top: 28px; margin-bottom: 10px; color: var(--ink); letter-spacing: -0.005em; }
+  h4 { font-family: var(--font-body); font-size: 14px; margin-top: 22px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+
+  p { margin: 0 0 14px; }
+  ul, ol { margin: 0 0 16px; padding-left: 24px; }
+  ul li, ol li { margin-bottom: 6px; }
+
+  a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; text-decoration-thickness: 1px; }
+  a:hover { background: var(--accent-soft); }
+
+  strong { font-weight: 700; color: var(--ink); }
+  em { font-style: italic; }
+
+  code { font-family: var(--font-mono); background: var(--code-bg); padding: 1px 6px; border-radius: 4px; font-size: 0.88em; }
+  pre { background: var(--code-bg); border-radius: 8px; padding: 16px 18px; overflow-x: auto; font-family: var(--font-mono); font-size: 13.5px; line-height: 1.5; margin: 0 0 18px; }
+  pre code { background: transparent; padding: 0; }
+
+  table { width: 100%; border-collapse: collapse; margin: 12px 0 22px; font-size: 14px; background: var(--paper); }
+  th, td { border-bottom: 1px solid var(--rule); padding: 10px 12px; text-align: left; vertical-align: top; }
+  th { background: #f7f5ef; font-weight: 600; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+  tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: #faf8f3; }
+  td.center { text-align: center; }
+
+  .callout { border-left: 4px solid var(--accent); background: var(--accent-soft); padding: 16px 20px; border-radius: 0 8px 8px 0; margin: 0 0 20px; }
+  .callout.tldr { border-left-color: var(--ink); background: var(--highlight); }
+  .callout.good { border-left-color: var(--good); background: var(--good-soft); }
+  .callout.warn { border-left-color: var(--warn); background: var(--warn-soft); }
+  .callout.info { border-left-color: var(--info); background: var(--info-soft); }
+  .callout.diff { border-left-color: var(--purple); background: var(--purple-soft); }
+  .callout h4 { margin-top: 0; color: var(--ink); }
+  .callout p:last-child { margin-bottom: 0; }
+
+  .tag { display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; margin-right: 6px; background: var(--code-bg); color: var(--muted); white-space: nowrap; }
+  .tag.weather { background: var(--sky-soft); color: var(--sky); }
+  .tag.search { background: var(--good-soft); color: var(--good); }
+  .tag.llm { background: var(--accent-soft); color: var(--accent); }
+  .tag.routing { background: var(--purple-soft); color: var(--purple); }
+  .tag.crosscut { background: var(--warn-soft); color: var(--warn); }
+  .tag.voice { background: var(--gray-soft); color: var(--gray); }
+  .tag.high { background: var(--warn-soft); color: var(--warn); }
+  .tag.med { background: var(--info-soft); color: var(--info); }
+  .tag.low { background: var(--code-bg); color: var(--muted); }
+
+  hr.divider { border: none; border-top: 1px solid var(--rule); margin: 36px 0; }
+
+  ul.sources { list-style: none; padding-left: 0; }
+  ul.sources li { margin-bottom: 4px; padding-left: 18px; position: relative; font-size: 14px; }
+  ul.sources li::before { content: "→"; position: absolute; left: 0; color: var(--muted); }
+
+  /* Diff/changelog styling for the reflection section */
+  .diff-list { list-style: none; padding-left: 0; }
+  .diff-list li { padding: 8px 12px; border-radius: 6px; margin-bottom: 6px; font-size: 14px; }
+  .diff-list li.removed { background: #fee2e2; color: #7f1d1d; }
+  .diff-list li.added   { background: var(--good-soft); color: var(--good); }
+  .diff-list li.moved   { background: var(--info-soft); color: var(--info); }
+  .diff-list li.kept    { background: var(--gray-soft); color: var(--gray); }
+  .diff-list li .label  { display: inline-block; width: 80px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; font-size: 11px; }
+
+  @media print {
+    aside { display: none; }
+    .layout { grid-template-columns: 1fr; max-width: none; }
+    main { padding: 24px; }
+    a { color: var(--ink); text-decoration: none; }
+    section { page-break-inside: avoid; }
+  }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    aside { position: relative; height: auto; border-right: none; border-bottom: 1px solid var(--rule); padding: 18px; }
+    main { padding: 28px 22px 64px; }
+    header.title-block h1 { font-size: 30px; }
+    section.section h2 { font-size: 22px; }
+  }
+
+  footer.report-footer { margin-top: 64px; padding-top: 24px; border-top: 1px solid var(--rule); font-size: 13px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <aside>
+    <div class="brand">API Quirks Research</div>
+    <div class="brand-sub">Elyos take-home preparation</div>
+    <div class="version">v2 · reorganised</div>
+    <nav aria-label="Table of contents">
+      <ol>
+        <li><a href="#sec-1">Why v2 exists</a></li>
+        <li><a href="#sec-2">Premise &amp; method</a></li>
+        <li><a href="#sec-3">Mapping mocks → real APIs</a></li>
+        <li><a href="#sec-4">Weather APIs in the wild</a></li>
+        <li><a href="#sec-5">Research / search APIs</a></li>
+        <li><a href="#sec-6">Mainstream text-gen APIs</a></li>
+        <li><a href="#sec-7">Routing layer (OpenRouter, LiteLLM)</a></li>
+        <li><a href="#sec-8">Cross-cutting patterns</a></li>
+        <li><a href="#sec-9">Quirk map → /weather + /research</a></li>
+        <li><a href="#sec-10">Day-1 hypothesis checklist</a></li>
+        <li><a href="#sec-11">Concrete probes</a></li>
+        <li><a href="#sec-12">Loom narrative</a></li>
+        <li><a href="#sec-13">Appendix: voice APIs (on-site only)</a></li>
+        <li><a href="#sec-14">Out of scope</a></li>
+        <li><a href="#sec-15">TL;DR</a></li>
+        <li><a href="#sources">Sources</a></li>
+      </ol>
+    </nav>
+  </aside>
+
+  <main>
+
+    <header class="title-block">
+      <h1>API Quirks Research <span class="v-badge">v2</span></h1>
+      <div class="subtitle">Hypothesis-driven preparation for Elyos's take-home — now anchored on the right API categories</div>
+      <dl>
+        <dt>For</dt>          <dd>Annamalai Narayanan</dd>
+        <dt>Purpose</dt>      <dd>Walk into the take-home with a tested hypothesis list rather than probing blindly</dd>
+        <dt>Anchor</dt>       <dd>The third-party APIs that conventionally back the agentic-AI "weather + research" demo slot, plus the mainstream text-gen APIs that drive the LLM loop</dd>
+        <dt>Date</dt>         <dd>2026-05-15 (v2)</dd>
+        <dt>Supersedes</dt>   <dd><code>api_quirks_research.html</code> (v1, voice-heavy)</dd>
+      </dl>
+    </header>
+
+    <!-- 1 -->
+    <section class="section" id="sec-1">
+      <h2><span class="num">1</span>Why v2 exists — reflection on v1</h2>
+
+      <p>v1 anchored on the wrong APIs. It opened with deep dives on OpenAI Realtime, Deepgram, and ElevenLabs — the <em>voice</em> stack. But the take-home is a text-only CLI exercise with tool calling, not a voice exercise. The mock <code>/weather</code> and <code>/research</code> endpoints sit in the canonical agentic-AI demo slot, which in the wild is backed by:</p>
+
+      <ul>
+        <li>For <code>/weather</code> — third-party weather APIs (OpenWeatherMap, WeatherAPI.com, Visual Crossing, Open-Meteo).</li>
+        <li>For <code>/research</code> — agentic web-search APIs (Tavily, Serper, Brave Search, Exa, Perplexity Sonar).</li>
+        <li>For the LLM loop driving both — mainstream text-gen APIs (OpenAI, Anthropic, Gemini, Cohere, Mistral, Groq), often fronted by a router (OpenRouter, LiteLLM).</li>
+      </ul>
+
+      <h3>What changed v1 → v2</h3>
+      <ul class="diff-list">
+        <li class="added"><span class="label">+ Added</span>Weather APIs section (OpenWeatherMap deprecation pain, free-tier traps, schema drift)</li>
+        <li class="added"><span class="label">+ Added</span>Web search / research APIs section (Tavily, Serper, Brave, Exa, Perplexity quirks)</li>
+        <li class="added"><span class="label">+ Added</span>Mainstream text-gen APIs section (Gemini, Cohere, Mistral, Groq beyond OpenAI/Anthropic)</li>
+        <li class="added"><span class="label">+ Added</span>Routing layer section (OpenRouter, LiteLLM multi-provider quirks)</li>
+        <li class="moved"><span class="label">~ Moved</span>OpenAI &amp; Anthropic kept, reframed as "LLM client layer" quirks in §6 (these affect your own code, not the mocks)</li>
+        <li class="moved"><span class="label">~ Moved</span>Mapping section moved up to §3 — it now anchors the document rather than appearing late</li>
+        <li class="moved"><span class="label">~ Moved</span>Voice (Deepgram, ElevenLabs, Realtime) demoted to an on-site-only appendix in §13</li>
+        <li class="kept"><span class="label">= Kept</span>Premise &amp; method, cross-cutting patterns, Day-1 checklist, probe script, Loom narrative, scope notes</li>
+      </ul>
+
+      <p>Net result: the document now leads with the right inspirations. The LLM-layer quirks are still here because your own code calls an LLM with tool calling — but they're framed as "your client implementation," not "what was planted in the mocks."</p>
+    </section>
+
+    <!-- 2 -->
+    <section class="section" id="sec-2">
+      <h2><span class="num">2</span>Premise and method</h2>
+
+      <p>The take-home explicitly tells you the mock APIs are "<em>intentionally imperfect... like real production APIs, they have undocumented behaviors, edge cases, and occasional failures</em>." It also explicitly says <code>/research</code> "<em>simulates real-world scenarios like database queries or AI processing</em>." The hypothesis driving this research is that the engineers who built the mocks <strong>encoded the quirks they have personally been bitten by</strong>. So if we catalogue the documented public-domain quirks of the real APIs that conventionally occupy this slot, we have a tested checklist of likely planted behaviours.</p>
+
+      <p>Method: focused web research through GitHub issue trackers, vendor docs, vendor status pages, developer community threads, and production guides. Findings are cited inline by category in §16.</p>
+
+      <p>Three layers of quirks to be aware of:</p>
+      <ul>
+        <li><strong>Layer A — the mock endpoints themselves.</strong> Inspired by weather + search APIs in the wild. Covered in §4 and §5.</li>
+        <li><strong>Layer B — the LLM loop in your own client code.</strong> Streaming tool calls, schema oddities, rate limits. Covered in §6 and §7.</li>
+        <li><strong>Layer C — generic API messiness</strong> that crosses all categories. Covered in §8.</li>
+      </ul>
+
+      <div class="callout info">
+        <p>Strong submissions will demonstrate awareness of all three layers, but the take-home weighs Layer A heavily (it's the "API Discovery" evaluation criterion). Layer B is your code-quality evaluation. Layer C is what shows seniority.</p>
+      </div>
+    </section>
+
+    <!-- 3 -->
+    <section class="section" id="sec-3">
+      <h2><span class="num">3</span>Mapping the mocks to real-world inspirations</h2>
+
+      <table>
+        <thead><tr><th>Mock endpoint</th><th>Stated behaviour</th><th>Most likely real-world inspiration</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>/weather</code><br><span class="tag weather">weather</span></td>
+            <td>~200ms latency. Simple tool returning weather for a location.</td>
+            <td><strong>Weather APIs</strong> — OpenWeatherMap, WeatherAPI.com, Visual Crossing, Open-Meteo. Especially likely: OpenWeatherMap, because of its dominance in agentic-AI tutorials and LangChain's official integration. The mock probably inherits OpenWeatherMap-style city-resolution, schema-drift, and rate-limit behaviours.</td>
+          </tr>
+          <tr>
+            <td><code>/research</code><br><span class="tag search">search</span></td>
+            <td>3–8s latency. "Simulates real-world scenarios like database queries or AI processing." Returns research summary on a topic.</td>
+            <td><strong>Web search / research APIs</strong> — Tavily, Serper, Brave Search, Exa, Perplexity Sonar. Tavily is the most likely inspiration: it's the dominant choice for agentic AI research tools today, with documented p50 ~180ms but real-world latency of 1–3s on advanced searches, and known quirks around content quality, snippet handling, and rate limits. Combined with possible LLM-summarisation quirks (from Perplexity-style synthesis).</td>
+          </tr>
+          <tr>
+            <td>Your LLM loop<br><span class="tag llm">llm</span></td>
+            <td>Implicit — your code calls OpenAI / Anthropic / similar to drive the conversation and call the tools.</td>
+            <td><strong>Mainstream text-gen APIs</strong> — OpenAI Chat Completions, Anthropic Messages, Gemini, Cohere, Mistral, Groq. These are quirky in their own right, and their quirks appear in <em>your client code</em>, not in the mocks. Strong submissions handle them.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout">
+        <p>Confidence level: <strong>medium-high</strong> on the category inference (these are the standard agentic-AI tutorial pairings), <strong>medium</strong> on the specific provider (any of the named providers could have inspired the mocks). Test empirically against this mapping; deviations are interesting signal too.</p>
+      </div>
+    </section>
+
+    <!-- 4 -->
+    <section class="section" id="sec-4">
+      <h2><span class="num">4</span>Weather APIs in the wild — documented quirks</h2>
+
+      <p>These are the gotchas an engineer building an agentic-AI weather tool with real APIs has hit. They are the most likely template for the planted <code>/weather</code> quirks.</p>
+
+      <h3>4.1 OpenWeatherMap — One Call 2.5 → 3.0 deprecation chaos</h3>
+      <p><span class="tag weather">weather</span> The single most-reported pain point in the weather-API ecosystem. OpenWeatherMap closed One Call API 2.5 in mid-2024. New API keys issued after the deprecation return <strong>401 errors</strong> against the 2.5 endpoint — but client code with hard-coded v2.5 paths continues to send those requests for years. Surface bug: "my key works but I'm getting 401". Real cause: the URL is deprecated.</p>
+      <p><strong>Sources:</strong> openhab-addons Issue #13314 (repeated 401s with new key due to deprecated URL); home-assistant/core Issue #119337 (Current Weather API broken/removed); pyowm Issue #404; sopel-weather Issue #52.</p>
+
+      <h3>4.2 OpenWeatherMap — dramatic rate-limit shift</h3>
+      <p><span class="tag weather">weather</span> v2.5 gave 60 calls/minute free. v3.0 gives 1,000 calls/day total — that's ~0.69 calls/minute averaged. Apps that worked fine under v2.5 immediately hit rate limits under v3.0 even though they're at the same volume.</p>
+      <p>Equally important: <strong>the same account can have different subscription tiers per endpoint</strong>. Current Weather API and One Call API are separate subscriptions. Same key, different rate limits, different docs.</p>
+
+      <h3>4.3 OpenWeatherMap — billing required for free tier</h3>
+      <p><span class="tag weather">weather</span> The v3.0 free quota (1,000/day) requires you to enter billing details to enable the endpoint, even though you stay under the free quota. Easy to miss in tutorials; surfaces as "endpoint returns 401 with a working key."</p>
+
+      <h3>4.4 City resolution inconsistencies</h3>
+      <p><span class="tag weather">weather</span> Across weather APIs, ambiguous city names ("Springfield", "London" — there are multiple) resolve to different cities depending on input format, geolocation hints, and API version. Returned coordinates and timezone may not match the city the user meant. Best practice is to require explicit lat/lon, but agentic AI tools rarely do that.</p>
+
+      <h3>4.5 Schema field omission vs null</h3>
+      <p><span class="tag weather">weather</span> Visual Crossing's documentation explicitly notes that fields are sometimes omitted entirely rather than returned as <code>null</code>. Defensive code that checks key existence works; code that assumes the key always exists crashes. This is generic across REST APIs but particularly notable in weather where some metrics (UV index, gusts) genuinely don't exist at all locations.</p>
+
+      <h3>4.6 Format drift across endpoints</h3>
+      <p><span class="tag weather">weather</span> Same weather provider, different endpoints often return temperatures in different units (Kelvin vs Celsius vs Fahrenheit) depending on the <code>units</code> param default, the endpoint version, and the historical API surface. Apps that work for current weather but break on forecast often hit this.</p>
+
+      <h3>4.7 Stale / cached responses</h3>
+      <p><span class="tag weather">weather</span> Weather APIs aggressively cache for cost reasons. Calling the same location twice within a few minutes returns identical data — sometimes identical timestamps even when nominally "current". Tests that rely on "the response changed" between calls fail.</p>
+
+      <h3>4.8 5xx during partner-data hiccups</h3>
+      <p><span class="tag weather">weather</span> Weather APIs aggregate from underlying data partners (NOAA, ECMWF, etc.). When one partner is degraded, the API may return 500 / 502 for specific locations even when others work fine. PVOutput forum threads have repeated reports of "OpenWeatherMap problems" tied to upstream-source issues.</p>
+
+      <h3>4.9 Free tier "soft" limits below documented numbers</h3>
+      <p><span class="tag weather">weather</span> Multiple weather providers (and AI APIs — see §6) throttle harder than their published limits. Documented 1,000/day might in practice fail at 700–800 if your traffic clusters in a short window.</p>
+    </section>
+
+    <!-- 5 -->
+    <section class="section" id="sec-5">
+      <h2><span class="num">5</span>Web search / research APIs in the wild — documented quirks</h2>
+
+      <p>These are the APIs that conventionally back the agentic-AI "research_topic" tool. Tavily is the most-used; Serper, Brave, Exa, and Perplexity Sonar are the major alternatives. The 3–8s latency profile of <code>/research</code> matches the real-world latency of these APIs.</p>
+
+      <h3>5.1 Tavily — latency variance from p50 ~180ms to multi-second tail</h3>
+      <p><span class="tag search">search</span> Tavily publishes p50 of ~180ms on basic search and ~998ms on advanced. In practice, advanced searches with <code>include_raw_content=true</code> and <code>include_answer=true</code> regularly run 2–5 seconds; cold cache or complex queries can push to 8+ seconds. Highly variable, which is exactly what the take-home's "3–8 seconds" simulation pattern looks like.</p>
+
+      <h3>5.2 Tavily — credit-based pricing kills naive retries</h3>
+      <p><span class="tag search">search</span> Basic search costs 1 credit; advanced search costs 2 credits. Free tier is 1,000 credits/month. Retrying a failed advanced search burns 2 credits regardless of whether the response was usable. Naive retry loops can drain a free tier in minutes.</p>
+
+      <h3>5.3 Tavily — JS-rendered pages return flaky / empty content</h3>
+      <p><span class="tag search">search</span> Tavily renders pages offline and caches results. JS-heavy sites (React/Vue SPAs that load content client-side) often return empty or partial content. The API "succeeds" — the body just has nothing useful in it. Surfaces as low-quality results, not as errors.</p>
+
+      <h3>5.4 Serper / SerpAPI — Google scraping is structurally fragile</h3>
+      <p><span class="tag search">search</span> Both providers scrape Google search results. When Google updates SERP layout/HTML, results temporarily go wrong. SerpAPI maintains a public roadmap of known bugs. Recent legal risk: Google v. SerpAPI lawsuit filed Dec 2025 creates regulatory uncertainty for the whole category.</p>
+
+      <h3>5.5 Exa — strong on semantic similarity, weak on recency</h3>
+      <p><span class="tag search">search</span> Exa's neural index excels at semantic similarity but scores low on freshness. Queries about recent events return stale results. Bench comparisons consistently flag this as Exa's main weakness.</p>
+
+      <h3>5.6 Perplexity Sonar — hallucination in synthesis</h3>
+      <p><span class="tag search">search</span> Perplexity's API does LLM-synthesised answers on top of search. The synthesised answer can hallucinate even when the underlying sources are accurate. Error messages on malformed requests are opaque (generic 400 without explanation), making debugging hard.</p>
+
+      <h3>5.7 Common: snippet truncation</h3>
+      <p><span class="tag search">search</span> All search APIs return snippets of bounded length. The same query can return different snippet lengths from the same source URL depending on internal logic. Code that depends on "this snippet will always contain X" breaks.</p>
+
+      <h3>5.8 Common: rate-limit shapes differ per provider</h3>
+      <p><span class="tag search">search</span> Each provider has its own 429 conventions. Tavily exposes credits remaining in headers; Serper uses a different header; Brave Search has its own. Generic 429 handlers fail across providers.</p>
+
+      <h3>5.9 Common: dependency on third-party sources</h3>
+      <p><span class="tag search">search</span> All real research APIs ultimately call out to web sources. When a target domain blocks scrapers, returns 403 to the API's user-agent, or rate-limits the API itself, results silently degrade. The API often returns a successful 200 with a thinner result set rather than reporting failure.</p>
+
+      <h3>5.10 Authentication header conventions vary</h3>
+      <p><span class="tag search">search</span> Tavily uses an <code>api_key</code> body parameter. Serper uses <code>X-API-KEY</code> header. Brave uses <code>X-Subscription-Token</code>. Perplexity uses <code>Authorization: Bearer</code>. The take-home uses <code>X-API-Key</code> — same as Brave Search's convention.</p>
+    </section>
+
+    <!-- 6 -->
+    <section class="section" id="sec-6">
+      <h2><span class="num">6</span>Mainstream text-generation APIs — your LLM client layer</h2>
+
+      <p>These quirks live in <em>your client code</em>, not in the Elyos mocks. They affect Layer B (the LLM loop) and are what the take-home's "implementation quality" criterion grades. Direct SDK use is what's expected; LangChain/LangGraph are explicitly discouraged.</p>
+
+      <h3>6.1 OpenAI — streaming tool-call arguments arrive as partial JSON</h3>
+      <p><span class="tag llm">llm</span> When streaming tool calls, the function <code>arguments</code> field is delivered character-by-character as deltas. Most intermediate states are invalid JSON. You see <code>{"qu</code>, then <code>{"query": "sal</code>, then <code>{"query": "sales rep</code>. Clients must accumulate deltas and only parse when the tool-call block ends. Naive <code>json.loads()</code> on each chunk crashes.</p>
+      <p><strong>Variant gotcha:</strong> some models/providers send the <em>complete</em> JSON in a single chunk, breaking parsers that expect incremental accumulation. The reverse also happens.</p>
+
+      <h3>6.2 OpenAI — JSON Mode shape inconsistency</h3>
+      <p><span class="tag llm">llm</span> JSON mode guarantees parseability, not schema. Keys can go missing, appear at the wrong nesting level, or be spelled differently between requests. Use <code>response_format=json_schema</code> (Structured Outputs) for real schema enforcement.</p>
+
+      <h3>6.3 OpenAI — 429 vs 5xx inconsistency on rate-limit conditions</h3>
+      <p><span class="tag llm">llm</span> Sometimes the same overload surfaces as a clean 429 with <code>Retry-After</code>; sometimes as 500/502 with no header. Rate limits are per-organization, not per-key. Unsuccessful requests still count toward the per-minute window. Naive retry compounds the problem.</p>
+
+      <h3>6.4 OpenAI — 200 OK with body timeout (UND_ERR_BODY_TIMEOUT)</h3>
+      <p><span class="tag llm">llm</span> The <code>/v1/responses</code> endpoint can return 200 OK with headers arriving promptly, then the body hangs. Clients abort with a body-read timeout. Set explicit body-read timeouts.</p>
+
+      <h3>6.5 OpenAI — SSE empty events crash naive parsers</h3>
+      <p><span class="tag llm">llm</span> Some SSE retry directives and comment lines come through as empty <code>data:</code> events. Clients that don't skip empties throw "unexpected end of JSON input."</p>
+
+      <h3>6.6 OpenAI — mid-stream error events lack <code>choices</code></h3>
+      <p><span class="tag llm">llm</span> When a stream errors mid-flight, the error object is shaped like <code>{"error": {"message": "...", "code": 500}}</code> — no <code>choices</code> array. Clients that expect every chunk to have <code>choices</code> crash on deserialization.</p>
+
+      <h3>6.7 OpenAI — <code>finish_reason: "stop"</code> on truncated output</h3>
+      <p><span class="tag llm">llm</span> Truncation should return <code>finish_reason: "length"</code>, but multiple reports show <code>"stop"</code> being returned on actually-truncated responses. Don't trust <code>finish_reason</code> alone — also compare actual length to expected.</p>
+
+      <h3>6.8 Anthropic — 529 overloaded_error vs 429 rate limit</h3>
+      <p><span class="tag llm">llm</span> Two distinct error codes with similar shape but different semantics. 429 = your account hit a rate limit, slow down. 529 = provider overload, wait ~30s and retry. Treating them identically wastes rate budget or kills recoverable sessions.</p>
+
+      <h3>6.9 Anthropic — empty text content blocks → 400</h3>
+      <p><span class="tag llm">llm</span> Submitting a message with empty text content blocks returns "<em>messages: text content blocks must be non-empty</em>". Common when an empty assistant turn slips into history.</p>
+
+      <h3>6.10 Anthropic — unknown SSE event types break naive clients</h3>
+      <p><span class="tag llm">llm</span> Anthropic adds new event types over time. Per docs, consumers should ignore unknown types for forward compatibility. Many clients crash instead.</p>
+
+      <h3>6.11 Anthropic — long max_tokens without streaming drops idle connection</h3>
+      <p><span class="tag llm">llm</span> Without streaming, intermediate networks drop idle connections during the model's "thinking" phase. Anthropic explicitly recommends streaming for requests &gt;10 minutes.</p>
+
+      <h3>6.12 Gemini — function-call argument streaming only on 3+ Pro</h3>
+      <p><span class="tag llm">llm</span> Gemini introduced <code>streamFunctionCallArguments</code> only in 3.x. Gemini 3.1 Flash-Lite does <em>not</em> support it. Code that assumes streaming arguments across all models breaks on Flash-Lite.</p>
+
+      <h3>6.13 Gemini — safety filter behaves differently in stream vs non-stream</h3>
+      <p><span class="tag llm">llm</span> Documented bug in <code>googleapis/python-genai</code> Issue #929: the same prompt returns <code>finish_reason = SAFETY</code> in <code>generate_content</code> but <code>finish_reason = STOP</code> in <code>generate_content_stream</code>. Safety filtering is applied incrementally in streaming mode, with different evaluation logic.</p>
+
+      <h3>6.14 Groq — three-dimensional rate limiting</h3>
+      <p><span class="tag llm">llm</span> Groq rate-limits across three axes: RPM (requests/min), TPM (tokens/min), and RPD (requests/day). The daily cap is what kills production usage on free tier (e.g., 1,000 RPD), not the per-minute limit. Per-model differences too (Llama 4 Maverick gets half quota; Gemma 2 9B gets 2.5× TPM).</p>
+
+      <h3>6.15 Groq — streaming format quirks cause "tool tokens leaking into text"</h3>
+      <p><span class="tag llm">llm</span> Some integrations disable streaming for Groq because the format causes weird tool tokens to leak into text output. Pattern: treat streaming as optional rather than mandatory if compatibility matters.</p>
+
+      <h3>6.16 Mistral / Cohere — tier limitations</h3>
+      <p><span class="tag llm">llm</span> Mistral's Experiment tier is prototype-only by terms of service. Cohere's free tier is non-commercial only. Code that works in dev may violate ToS in production.</p>
+
+      <h3>6.17 Per-provider 429 signatures differ</h3>
+      <p><span class="tag llm">llm</span> Groq sends 429 with <code>x-ratelimit-remaining-requests</code>. Gemini sends 429 with <code>retry-after</code>. OpenAI sends 429 with various headers depending on endpoint. Generic 429 handlers fail across providers. The dispatcher needs per-provider parsing.</p>
+
+      <h3>6.18 SSE idle disconnect on long tool-call loops</h3>
+      <p><span class="tag llm">llm</span> Long agentic loops where the LLM is "thinking" without emitting tokens for &gt;30s get killed by intermediate infrastructure (load balancers, proxies, ngrok). Affects all providers.</p>
+    </section>
+
+    <!-- 7 -->
+    <section class="section" id="sec-7">
+      <h2><span class="num">7</span>Routing / proxy layer — OpenRouter, LiteLLM</h2>
+
+      <p>The take-home explicitly says "OpenAI, Anthropic, <em>or similar</em>." Many engineers reach for OpenRouter or LiteLLM to keep provider choice flexible. Those abstraction layers introduce their own quirks — worth knowing because Panos may ask about provider-neutrality at the on-site.</p>
+
+      <h3>7.1 OpenRouter — silent routing to "bad" upstream servers</h3>
+      <p><span class="tag routing">routing</span> Documented in LiteLLM Issue #7887: OpenRouter sometimes routes requests to under-performing or broken upstream providers, surfacing as malformed responses, latency spikes, or quiet errors. You think you called Anthropic; OpenRouter actually routed to a fallback that's failing.</p>
+
+      <h3>7.2 OpenRouter — tool_calls format inconsistency</h3>
+      <p><span class="tag routing">routing</span> A recent OpenRouter / Anthropic change requires <code>tool_calls</code> to be an array; some LiteLLM versions still send an object. Surfaces as 400 Bad Request: <em>"expected array, received object"</em>. Cross-version compatibility matrix matters.</p>
+
+      <h3>7.3 LiteLLM — silent 429 swallowing</h3>
+      <p><span class="tag routing">routing</span> LiteLLM Issue #8448: LiteLLM is not handling 429s from OpenRouter, surfacing as <code>completion.choices[0].message.content = None</code> with an error object you have to inspect separately. Clients that only check <code>content</code> think the call succeeded with empty output.</p>
+
+      <h3>7.4 LiteLLM — internal default kwargs break OpenAI-compatible APIs</h3>
+      <p><span class="tag routing">routing</span> <code>BaseOpenAI</code> passes internal defaults like <code>frequency_penalty</code> to every request even when not specified. OpenAI-compatible providers that don't support all params reject the request with cryptic 400s. Hits especially on Anthropic-via-OpenRouter flows.</p>
+
+      <h3>7.5 LiteLLM — endpoint mapping holes for custom model names</h3>
+      <p><span class="tag routing">routing</span> Custom model names like <code>google/gemini-embedding-001</code> through OpenRouter return "unmapped LLM provider" errors. <code>openai/whisper-1</code> via OpenRouter fails with provider mapping errors. The promise of "any model, one API" has edges.</p>
+
+      <h3>7.6 Provider parameter passthrough is incomplete</h3>
+      <p><span class="tag routing">routing</span> OpenRouter exposes a <code>provider</code> argument to control upstream selection; LiteLLM doesn't pass it through cleanly in some versions. So even if you want to pin to one provider, you can't always.</p>
+
+      <h3>7.7 Diagnosing failures: provider vs gateway</h3>
+      <p><span class="tag routing">routing</span> When a call fails, you have to figure out: did the gateway (LiteLLM / OpenRouter) reject it, or did the upstream provider? Error messages often don't distinguish cleanly. LiteLLM publishes an error-diagnosis guide; OpenRouter has its own error reference.</p>
+
+      <div class="callout diff">
+        <p><strong>Engineering implication for the take-home:</strong> if you use LiteLLM in your CLI, decide deliberately whether to. The take-home says "use the provider's official SDK" — that's a hint to skip the router layer for this exercise. Bring it up as a trade-off you considered.</p>
+      </div>
+    </section>
+
+    <!-- 8 -->
+    <section class="section" id="sec-8">
+      <h2><span class="num">8</span>Cross-cutting patterns — universal API gotchas</h2>
+
+      <p>These show up across every API category and are likely encoded in the mocks at some level.</p>
+
+      <h3>8.1 Idempotency on retries</h3>
+      <p><span class="tag crosscut">cross-cut</span> Only retry tools that are idempotent or read-only. Non-idempotent calls need an idempotency key. Both <code>/weather</code> and <code>/research</code> appear idempotent, so retries should be safe, but check.</p>
+
+      <h3>8.2 Bounded exponential backoff + jitter</h3>
+      <p><span class="tag crosscut">cross-cut</span> Exponential (1s, 2s, 4s, 8s, 16s) + random jitter ±1s. Without jitter, distributed clients synchronise and cause thundering herds. Bound total retries.</p>
+
+      <h3>8.3 Honour <code>Retry-After</code> when present</h3>
+      <p><span class="tag crosscut">cross-cut</span> Naive backoff that ignores the header retries too early and gets re-rate-limited.</p>
+
+      <h3>8.4 Circuit breakers</h3>
+      <p><span class="tag crosscut">cross-cut</span> Track recent failure rate per endpoint. Open the circuit on high failure rate; allow occasional test calls during half-open. Important for the 100-concurrent-calls system-design discussion.</p>
+
+      <h3>8.5 200 OK with error body</h3>
+      <p><span class="tag crosscut">cross-cut</span> Some APIs return 200 with an <code>error</code> field in the response body. Always inspect body shape before assuming success.</p>
+
+      <h3>8.6 Schema drift / forward-compat tolerance</h3>
+      <p><span class="tag crosscut">cross-cut</span> Tolerate unknown fields; don't switch-case-exhaustively over event types or enum values.</p>
+
+      <h3>8.7 Timeout that hangs vs errors</h3>
+      <p><span class="tag crosscut">cross-cut</span> Some APIs return a clean error on timeout; others just stop sending bytes. Always set explicit client-side read timeouts shorter than your end-user deadline.</p>
+
+      <h3>8.8 Token / output budgets</h3>
+      <p><span class="tag crosscut">cross-cut</span> Cap input and output lengths. Don't trust <code>finish_reason</code> alone.</p>
+
+      <h3>8.9 Stale / aggressive caching</h3>
+      <p><span class="tag crosscut">cross-cut</span> Identical queries may return identical responses for some window. Useful for cost, or wrong if you expected fresh data. Cache-buster params help diagnose.</p>
+
+      <h3>8.10 Concurrent-request interference</h3>
+      <p><span class="tag crosscut">cross-cut</span> Some APIs serialise requests under the hood per-client; some have shared per-tenant resources that race. Probe under parallel load.</p>
+
+      <h3>8.11 Soft limits below documented numbers</h3>
+      <p><span class="tag crosscut">cross-cut</span> Provider-side throttling is often harsher than published. The soft limit is the one that protects you.</p>
+
+      <h3>8.12 Header conventions vary</h3>
+      <p><span class="tag crosscut">cross-cut</span> <code>X-API-Key</code>, <code>Authorization: Bearer</code>, <code>X-Subscription-Token</code>, <code>api_key</code> in body — all common. Note the take-home uses <code>X-API-Key</code>, matching Brave Search's convention.</p>
+    </section>
+
+    <!-- 9 -->
+    <section class="section" id="sec-9">
+      <h2><span class="num">9</span>Quirk map — which of these are most likely planted in /weather and /research</h2>
+
+      <h3>9.1 /weather — most likely planted quirks</h3>
+      <p>Based on the weather-API quirk catalogue (§4) and cross-cutting patterns (§8).</p>
+      <table>
+        <thead><tr><th>Likelihood</th><th>Quirk</th><th>Real-world analogue</th></tr></thead>
+        <tbody>
+          <tr><td><span class="tag high">High</span></td><td>Inconsistent response schema across different locations (missing keys vs <code>null</code>)</td><td>§4.5 Visual Crossing's omitted-vs-null pattern</td></tr>
+          <tr><td><span class="tag high">High</span></td><td>Ambiguous city names resolve to unexpected locations or return generic data</td><td>§4.4 city-resolution inconsistency</td></tr>
+          <tr><td><span class="tag high">High</span></td><td>Cached / stale data on repeated queries within a short window</td><td>§4.7 stale caching</td></tr>
+          <tr><td><span class="tag high">High</span></td><td>Empty / unicode / very-long inputs return unexpected behaviour (200 with garbage, 400, 500)</td><td>Generic input-validation gap</td></tr>
+          <tr><td><span class="tag high">High</span></td><td>Burst rate limit: spam 50 requests, hit a 429 with or without <code>Retry-After</code></td><td>§4.2 OpenWeatherMap rate-limit shift; §8.11 soft limits</td></tr>
+          <tr><td><span class="tag med">Med</span></td><td>Unknown locations return 200 with empty/default fields rather than 404</td><td>Common graceful-degradation gotcha</td></tr>
+          <tr><td><span class="tag med">Med</span></td><td>Occasional transient 5xx tied to "upstream data partner" simulation</td><td>§4.8 partner-data hiccups</td></tr>
+          <tr><td><span class="tag med">Med</span></td><td>200 OK with <code>{"error": "..."}</code> body</td><td>§8.5</td></tr>
+          <tr><td><span class="tag med">Med</span></td><td>Unit drift — temperature occasionally in different units</td><td>§4.6 format drift</td></tr>
+          <tr><td><span class="tag low">Low</span></td><td>Cold-start latency spike after idle (GCP Cloud Run characteristic)</td><td>Cloud Run infrastructure</td></tr>
+        </tbody>
+      </table>
+
+      <h3>9.2 /research — most likely planted quirks</h3>
+      <p>Based on the web-search / research-API quirk catalogue (§5) and cross-cutting patterns (§8). The 3–8s latency profile matches real research APIs almost exactly.</p>
+      <table>
+        <thead><tr><th>Likelihood</th><th>Quirk</th><th>Real-world analogue</th></tr></thead>
+        <tbody>
+          <tr><td><span class="tag high">High</span></td><td>Variable latency — sometimes &lt;3s, sometimes &gt;8s, occasional 10s+ tail</td><td>§5.1 Tavily latency variance</td></tr>
+          <tr><td><span class="tag high">High</span></td><td>Snippet / content quality varies even on identical topics — sometimes thin, sometimes rich</td><td>§5.3 JS-rendered page flakiness; §5.7 snippet truncation</td></tr>
+          <tr><td><span class="tag high">High</span></td><td>Intermittent 429 / 500 / 502 with or without <code>Retry-After</code></td><td>§5.8 rate-limit shape variance</td></tr>
+          <tr><td><span class="tag high">High</span></td><td>200 OK with timed-out or truncated body</td><td>§6.4 OpenAI body-timeout (LLM-synthesis simulation)</td></tr>
+          <tr><td><span class="tag high">High</span></td><td>Schema drift — same topic at different times returns different keys/structure</td><td>§5.6 Perplexity opaque errors; §6.2 OpenAI JSON-mode drift</td></tr>
+          <tr><td><span class="tag med">Med</span></td><td>"Hallucinated" / fabricated content in the research summary (intentional)</td><td>§5.6 Perplexity Sonar hallucination</td></tr>
+          <tr><td><span class="tag med">Med</span></td><td>Concurrent calls interfere or share state</td><td>§8.10 concurrency gotcha</td></tr>
+          <tr><td><span class="tag med">Med</span></td><td>Cached identical responses on repeat queries</td><td>§8.9 stale caching</td></tr>
+          <tr><td><span class="tag med">Med</span></td><td>Empty / unicode / very-long inputs cause failures</td><td>Generic</td></tr>
+          <tr><td><span class="tag low">Low</span></td><td>Stream / chunked transfer if the mock streams</td><td>Only if mock actually streams</td></tr>
+        </tbody>
+      </table>
+
+      <h3>9.3 Layer B — quirks in your LLM client loop (your code)</h3>
+      <p>Even if the mocks behave perfectly, your handling of the LLM streaming + tool-calling loop must explicitly account for these. They're graded under "implementation quality."</p>
+      <ul>
+        <li>Tool-call arguments arrive as partial JSON — never <code>json.loads()</code> mid-stream.</li>
+        <li><code>finish_reason</code> not reliably indicating truncation.</li>
+        <li>Mid-stream error events that lack <code>choices</code>.</li>
+        <li>Empty SSE events from comment lines / retry directives.</li>
+        <li>SSE idle disconnect on long-running tool calls.</li>
+        <li>429 / 529 / 5xx with provider-specific header conventions.</li>
+        <li>Cancellation: free resources, preserve partial response, stop downstream calls cleanly.</li>
+      </ul>
+    </section>
+
+    <!-- 10 -->
+    <section class="section" id="sec-10">
+      <h2><span class="num">10</span>Day-1 hypothesis checklist (run before writing handling logic)</h2>
+
+      <div class="callout good">
+        <p>Use this as your test plan. Run each item against <code>/weather</code> and <code>/research</code> in a quick exploratory script before writing the main implementation. Log everything to <code>DISCOVERIES.md</code> as you go.</p>
+      </div>
+
+      <h3>A. Input edge cases (Layer A)</h3>
+      <ol>
+        <li>Empty string: <code>?location=</code> and <code>?topic=</code></li>
+        <li>Single character, very long (5,000 chars), Unicode (e.g. <code>京都</code>, emoji), whitespace-only</li>
+        <li>SQL-injection-y inputs (<code>'; DROP TABLE</code>) — should be safely echoed back, not crash</li>
+        <li>Known-bad locations / topics ("Atlantis", "Mars", "Made-up Town") — does it return a default, error, or fabricated content?</li>
+        <li>Known-good locations with weird casing/punctuation ("LONDON", "lon-don", "Lon don")</li>
+        <li>Ambiguous cities ("Springfield" — many real ones; "London" — Ontario vs UK)</li>
+      </ol>
+
+      <h3>B. Response schema (Layer A)</h3>
+      <ol>
+        <li>Same input twice, 10 seconds apart — same response? Same keys? Same content?</li>
+        <li>Different inputs — are response keys/shape consistent across them?</li>
+        <li>Inspect every field type; check for <code>null</code>, missing keys, unexpected extra keys</li>
+        <li>Check if response body ever contains <code>{"error": "..."}</code> alongside a 200 status</li>
+        <li>For <code>/weather</code>: are units consistent across queries?</li>
+        <li>For <code>/research</code>: does the summary's structure (paragraphs, citations, length) vary?</li>
+      </ol>
+
+      <h3>C. Latency profile (Layer A)</h3>
+      <ol>
+        <li>Time 20 calls to <code>/weather</code> — what's the distribution? Any &gt;1s? Tail at p95/p99?</li>
+        <li>Time 20 calls to <code>/research</code> — what's the distribution? Any &gt;8s? Any &lt;3s? Tail shape?</li>
+        <li>Idle for 60s, then call — cold-start spike?</li>
+        <li>Rapid-fire 50 calls — does latency degrade? Rate limit?</li>
+      </ol>
+
+      <h3>D. Error handling (Layer A)</h3>
+      <ol>
+        <li>Burst 200 calls in 5 seconds — do you ever see 429? Does it carry a <code>Retry-After</code> header?</li>
+        <li>Run for 5 minutes, sampling — do you see 500/502 transients? At what rate?</li>
+        <li>When you do see an error, what's the body? JSON? HTML? Plain text? Empty?</li>
+        <li>Missing API key — what's the response? Wrong key?</li>
+        <li>Do error bodies share a consistent shape, or do they vary?</li>
+      </ol>
+
+      <h3>E. Connection behaviour (Layer A)</h3>
+      <ol>
+        <li>Set a 1-second client timeout — what happens? Clean error or hang?</li>
+        <li>Cancel a <code>/research</code> request mid-flight (close the socket) — does the server complete the work anyway?</li>
+        <li>Open a connection, send no data, wait 30 seconds — does the server close it?</li>
+        <li>Run two <code>/research</code> calls concurrently — independent? Or serialised?</li>
+      </ol>
+
+      <h3>F. Caching / idempotency (Layer A)</h3>
+      <ol>
+        <li>Repeat the same <code>/research?topic=X</code> 5 times in 10 seconds — same body? Same latency? Different request IDs?</li>
+        <li>Add a cache-buster (random query param) — does behaviour change?</li>
+        <li>Repeat the same <code>/weather?location=London</code> 5 times — same payload? Same timestamps?</li>
+      </ol>
+
+      <h3>G. Content-quality probes for /research</h3>
+      <ol>
+        <li>Ask for a deliberately impossible topic ("the colour of the smell of Tuesday") — does it fabricate, return empty, or error?</li>
+        <li>Ask for the same topic with subtle phrasing differences ("solar energy" vs "solar energy trends" vs "trends in solar energy") — same content or different?</li>
+        <li>Ask for a recent topic ("2026 elections") — does it hallucinate dates / use a stale model knowledge cutoff?</li>
+      </ol>
+
+      <h3>H. LLM-layer specific (Layer B — your code)</h3>
+      <ol>
+        <li>Confirm your tool-call argument parser handles partial JSON without crashing</li>
+        <li>Confirm cancellation during streaming preserves partial response and frees resources</li>
+        <li>Confirm <code>finish_reason</code> handling on truncation</li>
+        <li>Confirm mid-stream error events don't crash your client (look for missing <code>choices</code>)</li>
+        <li>Confirm 429 / 529 backoff with jitter; honour <code>Retry-After</code> when present</li>
+      </ol>
+    </section>
+
+    <!-- 11 -->
+    <section class="section" id="sec-11">
+      <h2><span class="num">11</span>Concrete probes you can run in 20 minutes</h2>
+
+      <p>Drop this into a scratch <code>probe.py</code> before writing the main app. Replace <code>X_API_KEY</code> with the provided key.</p>
+
+<pre><code>import asyncio, httpx, time, json
+from collections import Counter
+
+BASE = "https://elyos-interview-907656039105.europe-west2.run.app"
+HEAD = {"X-API-Key": "X_API_KEY"}
+
+async def probe_input(client, endpoint, param, value, label):
+    """One probe — record status, latency, body shape."""
+    t0 = time.monotonic()
+    try:
+        r = await client.get(f"{BASE}/{endpoint}", params={param: value},
+                             headers=HEAD, timeout=15.0)
+        dt = time.monotonic() - t0
+        body_preview = r.text[:300]
+        try:
+            j = r.json()
+            keys = sorted(j.keys()) if isinstance(j, dict) else type(j).__name__
+        except Exception:
+            keys = "NOT_JSON"
+        ra = r.headers.get("retry-after", "-")
+        print(f"[{label}] {r.status_code} {dt:.2f}s retry-after={ra} keys={keys}")
+        print(f"    body: {body_preview!r}")
+        return (r.status_code, dt, keys, body_preview)
+    except Exception as e:
+        dt = time.monotonic() - t0
+        print(f"[{label}] EXCEPTION after {dt:.2f}s: {type(e).__name__}: {e}")
+        return (None, dt, None, str(e))
+
+async def main():
+    async with httpx.AsyncClient() as client:
+        # A. input edge cases
+        cases = [
+            ("weather", "location", "", "weather/empty"),
+            ("weather", "location", "London", "weather/normal"),
+            ("weather", "location", "LONDON", "weather/upper"),
+            ("weather", "location", "京都", "weather/unicode"),
+            ("weather", "location", "Atlantis", "weather/fake"),
+            ("weather", "location", "Springfield", "weather/ambiguous"),
+            ("weather", "location", "x" * 5000, "weather/long"),
+            ("weather", "location", "'; DROP TABLE--", "weather/sqli"),
+            ("research", "topic", "", "research/empty"),
+            ("research", "topic", "solar energy", "research/normal"),
+            ("research", "topic", "the colour of the smell of Tuesday", "research/impossible"),
+            ("research", "topic", "x" * 5000, "research/long"),
+        ]
+        for ep, param, val, label in cases:
+            await probe_input(client, ep, param, val, label)
+
+        # C. latency profile — 20 weather calls
+        print("\n--- /weather latency distribution ---")
+        lats = []
+        for _ in range(20):
+            res = await probe_input(client, "weather", "location", "London", "weather/lat")
+            lats.append(res[1])
+        lats_s = sorted(lats)
+        print(f"min={lats_s[0]:.2f} p50={lats_s[len(lats_s)//2]:.2f} p95={lats_s[int(len(lats_s)*0.95)]:.2f} max={lats_s[-1]:.2f}")
+
+        # C. /research latency
+        print("\n--- /research latency (5 sequential) ---")
+        for i in range(5):
+            await probe_input(client, "research", "topic", f"renewable energy {i}", f"research/lat{i}")
+
+        # D. burst rate limit test
+        print("\n--- /weather burst (50 in parallel) ---")
+        tasks = [probe_input(client, "weather", "location", f"city-{i}", f"burst{i}")
+                 for i in range(50)]
+        out = await asyncio.gather(*tasks)
+        codes = Counter(x[0] for x in out)
+        print(f"status codes: {dict(codes)}")
+
+        # E. concurrent /research
+        print("\n--- /research concurrent x3 ---")
+        t0 = time.monotonic()
+        await asyncio.gather(
+            probe_input(client, "research", "topic", "alpha", "research/c1"),
+            probe_input(client, "research", "topic", "beta", "research/c2"),
+            probe_input(client, "research", "topic", "gamma", "research/c3"),
+        )
+        print(f"total wall time: {time.monotonic() - t0:.2f}s (parallel should ~= slowest)")
+
+        # F. caching probe — same topic repeated
+        print("\n--- /research caching probe (same topic x3) ---")
+        for i in range(3):
+            await probe_input(client, "research", "topic", "renewables", f"research/cache{i}")
+
+        # F. /weather caching
+        print("\n--- /weather caching probe (London x5) ---")
+        for i in range(5):
+            await probe_input(client, "weather", "location", "London", f"weather/cache{i}")
+
+asyncio.run(main())
+</code></pre>
+
+      <p>Run this once. Every interesting deviation goes into <code>DISCOVERIES.md</code>. Then write the main implementation, handling each discovered behaviour deliberately.</p>
+    </section>
+
+    <!-- 12 -->
+    <section class="section" id="sec-12">
+      <h2><span class="num">12</span>How to talk about this in the Loom video and on-site</h2>
+
+      <p>The take-home weights the API-discovery section highest. Your narrative should be hypothesis-driven, not exploratory-drift.</p>
+
+      <div class="callout">
+        <h4>Suggested Loom framing (~45 seconds in the API Discovery section)</h4>
+        <p><em>"Before writing any handling code, I made a hypothesis. The mocks describe themselves as 'real-world AI processing' and they sit in the canonical agentic-AI tool-calling slot — weather plus research. In the wild, that slot is conventionally backed by OpenWeatherMap-style weather APIs and Tavily-style web-search APIs, with an LLM driving the loop. So I spent 20 minutes reading public-domain bug reports and docs for those API categories and built a hypothesis checklist of about 20 likely quirks. Then I wrote a small probe script and tested. Of those, [X] turned out to be present in the mocks, [Y] turned out not to be, and I found [Z] additional quirks I hadn't predicted, mostly around [edge cases]. I'll walk through them in priority order."</em></p>
+      </div>
+
+      <p>For each quirk you found, follow this micro-structure:</p>
+      <ol>
+        <li><strong>What I observed.</strong> Concrete: status code, body, latency, conditions.</li>
+        <li><strong>How I noticed it.</strong> Hypothesis-driven (from the checklist) or accidental.</li>
+        <li><strong>How I handled it.</strong> Specific code path; be explicit about the trade-off chosen.</li>
+        <li><strong>What I'd do differently with more time.</strong> Honest self-critique.</li>
+      </ol>
+
+      <h3>On-site code-discussion preparation</h3>
+      <p>Panos's Part 1 will probe deep on 1–2 specific quirks. Be ready to:</p>
+      <ul>
+        <li>Explain why a 200 OK with a timed-out or malformed body is harder than a clean 5xx — and what your client did about it.</li>
+        <li>Explain partial-JSON accumulation in streaming tool calls — when to parse, how to handle malformed final state.</li>
+        <li>Sketch exponential backoff with jitter; distinguish idempotent vs non-idempotent retries.</li>
+        <li>Reason about circuit-breaker placement in a 100-concurrent-calls system.</li>
+        <li>Explain provider-specific 429 conventions (Groq vs Gemini vs OpenAI) if multi-provider comes up.</li>
+      </ul>
+    </section>
+
+    <!-- 13 -->
+    <section class="section" id="sec-13">
+      <h2><span class="num">13</span>Appendix: voice APIs (for the on-site, not the take-home)</h2>
+
+      <p>Brief notes on Deepgram and ElevenLabs quirks — kept because the on-site explicitly adds real-time audio via Deepgram STT and ElevenLabs TTS. Not relevant to the take-home itself.</p>
+
+      <h3>13.1 Deepgram — top quirks</h3>
+      <ul>
+        <li><span class="tag voice">voice</span> <strong>NET-0001:</strong> connection closes if no audio for 10 seconds. Send <code>KeepAlive</code> every 3–5s.</li>
+        <li><span class="tag voice">voice</span> <strong>KeepAlive must be a text frame.</strong> Binary frame fails silently.</li>
+        <li><span class="tag voice">voice</span> <strong>KeepAlive alone is not enough</strong> — at least one audio frame must be sent.</li>
+        <li><span class="tag voice">voice</span> <strong>Interim vs final results:</strong> <code>is_final: false</code> vs <code>true</code>. Acting on interim is a common bug.</li>
+        <li><span class="tag voice">voice</span> <strong>VAD/endpointing fails in noisy environments</strong> — <code>speech_final=true</code> may not fire.</li>
+        <li><span class="tag voice">voice</span> <strong><code>smart_format=true</code></strong> intentionally delays finalisation for phone numbers, dates, etc.</li>
+        <li><span class="tag voice">voice</span> <strong>WebSocket disconnect recovery requires audio buffering</strong> — replay buffered audio on reconnect.</li>
+      </ul>
+
+      <h3>13.2 ElevenLabs — top quirks</h3>
+      <ul>
+        <li><span class="tag voice">voice</span> <strong><code>chunk_length_schedule</code></strong> — model stalls if text trickle is below the threshold.</li>
+        <li><span class="tag voice">voice</span> <strong>WebSocket can be slower than REST</strong> over high-latency networks (711ms vs 478ms TTFB in real tests).</li>
+        <li><span class="tag voice">voice</span> <strong><code>eleven_monolingual_v1</code> / <code>eleven_multilingual_v1</code> deprecated.</strong></li>
+        <li><span class="tag voice">voice</span> <strong>Flash ≡ Turbo</strong> functionally, but Flash is lower latency.</li>
+        <li><span class="tag voice">voice</span> <strong>429 has two different messages:</strong> <code>"too_many_concurrent_requests"</code> or <code>"system_busy"</code> — same status code, different cause.</li>
+        <li><span class="tag voice">voice</span> <strong>Default voices drift</strong> over time as ElevenLabs updates the catalogue — pin specific voice IDs in production.</li>
+      </ul>
+
+      <h3>13.3 OpenAI Realtime API — top quirks</h3>
+      <ul>
+        <li><span class="tag voice">voice</span> <strong>Twilio + Realtime STT timeout race</strong> during initial greeting — buffer audio until both connections are ready.</li>
+        <li><span class="tag voice">voice</span> <strong>Barge-in:</strong> server-side <code>response.cancel</code> + client must clear its own audio buffer.</li>
+        <li><span class="tag voice">voice</span> <strong>SIP transport 521s</strong> intermittently on first connect (~5%).</li>
+        <li><span class="tag voice">voice</span> <strong>Transport choice matters:</strong> WebRTC for browsers, WebSocket for server-orchestrated tools, SIP for telephony.</li>
+      </ul>
+    </section>
+
+    <!-- 14 -->
+    <section class="section" id="sec-14">
+      <h2><span class="num">14</span>What this research does NOT cover</h2>
+
+      <ul>
+        <li><strong>CRM/FSM APIs</strong> (Simpro, JobLogic, Commusoft, ServiceTitan, GoHighLevel). The take-home is AI engineering, not integration.</li>
+        <li><strong>Twilio / LiveKit telephony.</strong> Relevant for the on-site system-design discussion, not for the take-home.</li>
+        <li><strong>Per-customer prompt / dialog policy quirks.</strong> Elyos-internal, not visible in public APIs.</li>
+        <li><strong>The specific planted quirks in Elyos's mocks.</strong> These are hypotheses from public-domain documentation. Some will be there, some won't, some real ones won't appear in this list. Treat the checklist as a starting point.</li>
+      </ul>
+    </section>
+
+    <!-- 15 -->
+    <section class="section" id="sec-15">
+      <h2><span class="num">15</span>TL;DR</h2>
+      <div class="callout tldr">
+        <ul>
+          <li><strong>Hypothesis:</strong> The quirks planted in <code>/weather</code> and <code>/research</code> are inspired by real-world quirks of the third-party APIs that conventionally back the agentic-AI weather + research demo slot — OpenWeatherMap-style weather APIs and Tavily-style web-search APIs — plus the LLM-API quirks that affect your own client code.</li>
+          <li><strong>Approach:</strong> Catalogue documented public-domain quirks of those API categories; turn them into a testable checklist; run a 20-minute probe script before writing the implementation.</li>
+          <li><strong>Strongest planted-quirk candidates for <code>/weather</code>:</strong> schema drift, ambiguous-city resolution, stale caching, burst rate limits, unit drift, 200-with-error-body, occasional 5xx tied to "upstream partner" simulation.</li>
+          <li><strong>Strongest planted-quirk candidates for <code>/research</code>:</strong> variable latency (3–8s with tail), content-quality variance on identical topics, intermittent 429/5xx, 200 OK with timed-out body, schema drift, possible fabricated content on impossible topics, concurrent-call interference.</li>
+          <li><strong>Strongest candidates in your LLM client code:</strong> partial-JSON streaming for tool-call arguments; mid-stream error events without <code>choices</code>; SSE empty-event handling; <code>finish_reason: stop</code> on truncated output; provider-specific 429 conventions.</li>
+          <li><strong>Out of scope for take-home, on for on-site:</strong> voice APIs (Deepgram, ElevenLabs, OpenAI Realtime) — quirks are in §13.</li>
+          <li><strong>Loom narrative:</strong> hypothesis-driven, not exploratory-drift. Walk them through your category-inspired checklist, what you found, what you missed.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Sources -->
+    <section class="section" id="sources">
+      <h2><span class="num">★</span>Sources</h2>
+
+      <h3>Weather APIs</h3>
+      <ul class="sources">
+        <li><a href="https://openweathermap.org/api/one-call-transfer">OpenWeatherMap — One Call API 2.5 → 3.0 transfer guide</a></li>
+        <li><a href="https://openweathermap.org/api/one-call-3">OpenWeatherMap — One Call API 3.0 docs</a></li>
+        <li><a href="https://openweathermap.org/faq">OpenWeatherMap FAQ</a></li>
+        <li><a href="https://github.com/openhab/openhab-addons/issues/13314">openhab-addons Issue #13314 — 401 errors due to deprecated One Call URL</a></li>
+        <li><a href="https://github.com/home-assistant/core/issues/119337">home-assistant/core Issue #119337 — Current Weather API broken/removed</a></li>
+        <li><a href="https://github.com/csparpa/pyowm/issues/404">pyowm Issue #404 — OpenWeatherMap deprecating 2.5 APIs</a></li>
+        <li><a href="https://github.com/sopel-irc/sopel-weather/issues/52">sopel-weather Issue #52 — API v2.5 going away</a></li>
+        <li><a href="https://forum.pvoutput.org/t/openweathermap-api-problems/5746">PVOutput Community — OpenWeatherMap API Problems</a></li>
+        <li><a href="https://www.visualcrossing.com/weather-api/">Visual Crossing Weather API</a></li>
+        <li><a href="https://www.visualcrossing.com/resources/blog/replacing-the-openweathermap-api-with-visual-crossing-weather/">Visual Crossing — replacing OpenWeatherMap</a></li>
+        <li><a href="https://www.xweather.com/blog/top-weather-apis-for-production-2026">Xweather — Top weather APIs 2026</a></li>
+        <li><a href="https://www.abstractapi.com/guides/other/best-weather-apis">Abstract API — Best Weather APIs for Developers</a></li>
+      </ul>
+
+      <h3>Web search / research APIs</h3>
+      <ul class="sources">
+        <li><a href="https://www.tavily.com/">Tavily — homepage</a></li>
+        <li><a href="https://docs.tavily.com/documentation/rate-limits">Tavily — Rate Limits</a></li>
+        <li><a href="https://www.tavily.com/blog/tavily-101-ai-powered-search-for-developers">Tavily 101 — AI-powered Search for Developers</a></li>
+        <li><a href="https://alphacorp.ai/blog/perplexity-search-api-vs-tavily-for-rag-2026">Perplexity Search API vs Tavily for RAG 2026</a></li>
+        <li><a href="https://www.humai.blog/tavily-vs-exa-vs-perplexity-vs-you-com-the-complete-ai-search-api-comparison-2025/">Tavily vs Exa vs Perplexity vs You.com comparison</a></li>
+        <li><a href="https://parallel.ai/articles/tavily-vs-parallel-search">Tavily vs Parallel — search API for AI agents</a></li>
+        <li><a href="https://aimultiple.com/agentic-search">AIMultiple — Benchmark 8 Search APIs for Agents 2026</a></li>
+        <li><a href="https://serpapi.com/blog/serpapi-alternatives-best-web-search-apis/">SerpApi — Best Web Search APIs 2026</a></li>
+        <li><a href="https://dev.to/supertrained/exa-vs-tavily-vs-serper-vs-brave-search-for-ai-agents-an-score-comparison-2l1g">Exa vs Tavily vs Serper vs Brave — AN score comparison</a></li>
+        <li><a href="https://www.scrapeless.com/en/blog/anthropic-web-search-alternatives">Scrapeless — Top Anthropic Web Search Alternatives</a></li>
+        <li><a href="https://codenote.net/en/posts/tavily-alternatives-cost-comparison-search-extract-api/">Tavily alternatives — cost comparison</a></li>
+        <li><a href="https://michaellivs.com/blog/web-search-for-agents-2026/">/dev/michael — Web Search for Agents in 2026</a></li>
+      </ul>
+
+      <h3>Mainstream text-generation APIs</h3>
+      <ul class="sources">
+        <li><a href="https://community.openai.com/t/chat-completion-responses-suddenly-returning-malformed-or-inconsistent-json/1368077">OpenAI dev community — Chat Completion responses returning malformed JSON</a></li>
+        <li><a href="https://community.openai.com/t/high-rate-of-invalid-json-response-when-streaming-response/279977">OpenAI dev community — High rate of invalid JSON when streaming</a></li>
+        <li><a href="https://community.openai.com/t/200-ok-from-v1-responses-but-body-times-out-und-err-body-timeout/1371083">OpenAI dev community — 200 OK from /v1/responses but body times out</a></li>
+        <li><a href="https://github.com/openai/openai-go/issues/556">openai-go Issue #556 — SSE Stream Crashes on Empty Events</a></li>
+        <li><a href="https://github.com/openai/openai-python/issues/649">openai-python Issue #649 — streaming chunk generator incomplete JSON</a></li>
+        <li><a href="https://help.openai.com/en/articles/5955604-how-can-i-solve-429-too-many-requests-errors">OpenAI Help — How to solve 429 errors</a></li>
+        <li><a href="https://cookbook.openai.com/examples/how_to_handle_rate_limits">OpenAI Cookbook — How to handle rate limits</a></li>
+        <li><a href="https://docs.anthropic.com/en/api/errors">Anthropic — Errors documentation</a></li>
+        <li><a href="https://docs.anthropic.com/en/docs/build-with-claude/streaming">Anthropic — Streaming messages</a></li>
+        <li><a href="https://github.com/anthropics/claude-code/issues/26870">claude-code Issue #26870 — Empty text content blocks</a></li>
+        <li><a href="https://github.com/anthropics/claude-code/issues/59022">claude-code Issue #59022 — Unhandled SSE event type</a></li>
+        <li><a href="https://github.com/anthropics/claude-code/issues/45066">claude-code Issue #45066 — 529 overloaded_error session crash</a></li>
+        <li><a href="https://tokenmix.ai/blog/claude-api-error-529-overload-strategy-2026">TokenMix — Claude API 529 strategy</a></li>
+        <li><a href="https://ai.google.dev/gemini-api/docs/function-calling">Gemini — Function calling docs</a></li>
+        <li><a href="https://ai.google.dev/gemini-api/docs/safety-settings">Gemini — Safety settings</a></li>
+        <li><a href="https://github.com/googleapis/python-genai/issues/929">python-genai Issue #929 — Inconsistent safety behavior in streaming mode</a></li>
+        <li><a href="https://console.groq.com/docs/rate-limits">Groq — Rate limits docs</a></li>
+        <li><a href="https://tokenmix.ai/blog/groq-free-tier-limits-2026">TokenMix — Groq free tier limits 2026</a></li>
+        <li><a href="https://docs.cohere.com/docs/rate-limits">Cohere — Rate limits docs</a></li>
+        <li><a href="https://help.mistral.ai/en/articles/424390-how-do-api-rate-limits-work-and-how-do-i-increase-them">Mistral — Rate limit help</a></li>
+      </ul>
+
+      <h3>Routing / proxy (OpenRouter, LiteLLM)</h3>
+      <ul class="sources">
+        <li><a href="https://github.com/BerriAI/litellm/issues/7887">LiteLLM Issue #7887 — Broken providers in OpenRouter through LiteLLM</a></li>
+        <li><a href="https://github.com/BerriAI/litellm/issues/8448">LiteLLM Issue #8448 — Not handling 429s from OpenRouter</a></li>
+        <li><a href="https://github.com/BerriAI/litellm/issues/6857">LiteLLM Issue #6857 — Provider arg passthrough not supported</a></li>
+        <li><a href="https://github.com/BerriAI/litellm/issues/17773">LiteLLM Issue #17773 — OpenRouter embedding support holes</a></li>
+        <li><a href="https://github.com/BerriAI/litellm/issues/27083">LiteLLM Issue #27083 — Whisper-1 via OpenRouter mapping errors</a></li>
+        <li><a href="https://github.com/agent0ai/agent-zero/issues/1025">agent-zero Issue #1025 — OpenRouter tool_calls array/object mismatch</a></li>
+        <li><a href="https://github.com/langchain-ai/langchain/issues/34328">langchain Issue #34328 — OpenRouter / LiteLLM compatibility</a></li>
+        <li><a href="https://docs.litellm.ai/docs/proxy/error_diagnosis">LiteLLM docs — Diagnosing Errors: Provider vs Gateway</a></li>
+        <li><a href="https://openrouter.ai/docs/api/reference/errors-and-debugging">OpenRouter docs — Error Handling and Debugging</a></li>
+      </ul>
+
+      <h3>Production patterns (cross-cutting)</h3>
+      <ul class="sources">
+        <li><a href="https://portkey.ai/blog/retries-fallbacks-and-circuit-breakers-in-llm-apps/">Portkey — Retries, fallbacks, and circuit breakers in LLM apps</a></li>
+        <li><a href="https://www.getmaxim.ai/articles/retries-fallbacks-and-circuit-breakers-in-llm-apps-a-production-guide/">Maxim AI — Retries, fallbacks, and circuit breakers (production guide)</a></li>
+        <li><a href="https://medium.com/@2nick2patel2/llm-tooling-in-prod-retries-guards-and-timeouts-850241b6bf60">Codastra — LLM Tooling in Prod</a></li>
+        <li><a href="https://markaicode.com/fix-llm-api-timeout-errors-production/">Markaicode — Fix LLM API Timeout Errors</a></li>
+        <li><a href="https://www.aha.io/engineering/articles/streaming-ai-responses-incomplete-json">Aha! Engineering — Streaming AI responses and the incomplete JSON problem</a></li>
+        <li><a href="https://www.typedef.ai/resources/handle-token-limits-rate-limits-large-scale-llm-inference">Typedef — Handle Token &amp; Rate Limits in Large-Scale LLM Inference</a></li>
+      </ul>
+
+      <h3>Voice APIs (appendix reference)</h3>
+      <ul class="sources">
+        <li><a href="https://developers.deepgram.com/docs/stt-troubleshooting-websocket-data-and-net-errors">Deepgram — STT Troubleshooting WebSocket/NET/DATA errors</a></li>
+        <li><a href="https://developers.deepgram.com/docs/audio-keep-alive">Deepgram — Audio Keep Alive</a></li>
+        <li><a href="https://elevenlabs.io/docs/eleven-api/concepts/latency">ElevenLabs — Understanding latency</a></li>
+        <li><a href="https://elevenlabs.io/docs/eleven-api/concepts/audio-streaming">ElevenLabs — Audio streaming</a></li>
+        <li><a href="https://github.com/elevenlabs/elevenlabs-python/issues/114">elevenlabs-python Issue #114 — Stream stuttering</a></li>
+        <li><a href="https://github.com/openai/openai-agents-js/issues/157">openai-agents-js Issue #157 — RealtimeSession message events</a></li>
+      </ul>
+
+      <h3>Reference: LangChain weather-tool tutorials (real-world inspiration for the mock)</h3>
+      <ul class="sources">
+        <li><a href="https://docs.langchain.com/oss/python/integrations/tools/openweathermap">LangChain — Official OpenWeatherMap integration</a></li>
+        <li><a href="https://github.com/AlgoMart/langchain-weather-assistant">AlgoMart — LangChain Weather Assistant</a></li>
+        <li><a href="https://github.com/hari04hp/langchain-weather-tool-calling">hari04hp — LangChain weather tool calling</a></li>
+        <li><a href="https://github.com/GoodAITechnology/LangChain-Tutorials">GoodAI Technology — LangChain Tutorials (Weather Bot)</a></li>
+      </ul>
+    </section>
+
+    <footer class="report-footer">
+      <p>Generated 2026-05-15 (v2). All quirks are <em>hypotheses</em> drawn from public-domain documentation of real APIs, not confirmed planted behaviours in Elyos's mocks. Use the Day-1 checklist (§10) and probe script (§11) to validate empirically before writing handling code. Saved to <code>/Users/annamalainarayanan/Desktop/personal/interview_prep/elyosai/</code>.</p>
+    </footer>
+
+  </main>
+</div>
+</body>
+</html>

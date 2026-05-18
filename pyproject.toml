@@ -1,0 +1,43 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "elyosai-takehome"
+version = "0.1.0"
+description = "Elyos AI take-home — streaming CLI chat with tool calling against /weather and /research"
+authors = [{name = "Annamalai Narayanan"}]
+
+requires-python = ">=3.12"
+dependencies = [
+    # Core runtime
+    "python-dotenv",
+    "httpx",
+    "pyyaml",
+
+    # LLM provider SDKs (use whichever the chat app ends up choosing)
+    "openai",
+    "anthropic",
+
+    # LiteLLM + helpers ported from eugenix_cp2 (kept available, optional to use)
+    "litellm",
+    "langchain-core",
+    "langchain-litellm",
+    "pydantic",
+    "pydantic-settings",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black",
+    "flake8",
+]
+
+[tool.hatch.build]
+packages = ["backend"]
+include = [
+    "backend/**/*.py",
+    "backend/chat/*.yaml",
+    "backend/reference_docs/*.csv",
+    "backend/reference_docs/*.md",
+]

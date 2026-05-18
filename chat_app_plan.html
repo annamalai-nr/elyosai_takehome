@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chat App Build Plan (v2)</title>
+<style>
+  :root {
+    --bg: #fafaf7; --paper: #ffffff; --ink: #1a1a1a; --muted: #5c5c5c;
+    --rule: #e5e3dc; --accent: #b94a1f; --accent-soft: #fbe9df;
+    --highlight: #fff6d6; --code-bg: #f3f1ec;
+    --good: #166534; --good-soft: #dcfce7;
+    --warn: #92400e; --warn-soft: #fef3c7;
+    --info: #1e40af; --info-soft: #dbeafe;
+    --danger: #991b1b; --danger-soft: #fee2e2;
+    --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", Roboto, Arial, sans-serif;
+    --font-serif: "Iowan Old Style", Palatino, "Times New Roman", Times, serif;
+    --font-mono: "SF Mono", Menlo, Monaco, Consolas, "Courier New", monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.65; -webkit-font-smoothing: antialiased; }
+  .layout { display: grid; grid-template-columns: 240px minmax(0, 1fr); max-width: 1200px; margin: 0 auto; }
+  aside { position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto; padding: 28px 20px 28px 28px; border-right: 1px solid var(--rule); background: var(--bg); }
+  aside .brand { font-family: var(--font-serif); font-size: 20px; font-weight: 600; }
+  aside .brand-sub { color: var(--muted); font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 22px; }
+  aside nav ol { list-style: none; padding: 0; margin: 0; counter-reset: section; }
+  aside nav li { counter-increment: section; margin-bottom: 6px; }
+  aside nav a { display: block; padding: 6px 10px; border-radius: 6px; color: var(--ink); text-decoration: none; font-size: 13.5px; line-height: 1.35; border-left: 2px solid transparent; transition: background 120ms ease; }
+  aside nav a::before { content: counter(section, decimal-leading-zero) "  "; color: var(--muted); font-size: 11.5px; }
+  aside nav a:hover { background: var(--accent-soft); color: var(--accent); border-left-color: var(--accent); }
+  main { padding: 48px 56px 96px; background: var(--paper); min-width: 0; }
+  header.title-block { margin-bottom: 36px; padding-bottom: 28px; border-bottom: 2px solid var(--ink); }
+  header.title-block h1 { font-family: var(--font-serif); font-size: 34px; margin: 0 0 8px; letter-spacing: -0.01em; }
+  header.title-block .subtitle { color: var(--muted); font-size: 15px; font-style: italic; }
+  header.title-block dl { display: grid; grid-template-columns: max-content 1fr; column-gap: 18px; row-gap: 4px; margin: 22px 0 0; font-size: 14px; }
+  header.title-block dt { color: var(--muted); font-weight: 500; }
+  header.title-block dd { margin: 0; }
+  section { margin-bottom: 48px; }
+  section.section h2 { font-family: var(--font-serif); font-size: 24px; margin: 0 0 16px; padding-bottom: 8px; border-bottom: 1px solid var(--rule); }
+  section.section h2 .num { color: var(--accent); margin-right: 12px; font-size: 0.78em; font-weight: 500; }
+  h3 { font-size: 18px; margin-top: 24px; margin-bottom: 8px; }
+  p { margin: 0 0 12px; }
+  ul, ol { margin: 0 0 14px; padding-left: 24px; }
+  ul li, ol li { margin-bottom: 5px; }
+  code { font-family: var(--font-mono); background: var(--code-bg); padding: 1px 6px; border-radius: 4px; font-size: 0.88em; }
+  pre { background: var(--code-bg); border-radius: 8px; padding: 14px 18px; overflow-x: auto; font-family: var(--font-mono); font-size: 12.5px; line-height: 1.5; margin: 0 0 16px; white-space: pre-wrap; word-break: break-all; }
+  pre code { background: transparent; padding: 0; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 20px; font-size: 14px; }
+  th, td { border-bottom: 1px solid var(--rule); padding: 10px 12px; text-align: left; vertical-align: top; }
+  th { background: #f7f5ef; font-weight: 600; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+  tr:last-child td { border-bottom: none; }
+  .callout { border-left: 4px solid var(--accent); background: var(--accent-soft); padding: 14px 18px; border-radius: 0 8px 8px 0; margin: 0 0 18px; }
+  .callout.tldr { border-left-color: var(--ink); background: var(--highlight); }
+  .callout.good { border-left-color: var(--good); background: var(--good-soft); }
+  .callout.warn { border-left-color: var(--warn); background: var(--warn-soft); }
+  .callout.info { border-left-color: var(--info); background: var(--info-soft); }
+  .callout.danger { border-left-color: var(--danger); background: var(--danger-soft); }
+  .callout p:last-child { margin-bottom: 0; }
+  .tag { display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; margin-right: 6px; }
+  .tag.must { background: var(--danger-soft); color: var(--danger); }
+  .tag.nice { background: var(--info-soft); color: var(--info); }
+  .tag.skip { background: var(--code-bg); color: var(--muted); }
+  .tag.rev { background: var(--warn-soft); color: var(--warn); }
+  footer { margin-top: 56px; padding-top: 22px; border-top: 1px solid var(--rule); font-size: 13px; color: var(--muted); }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } aside { position: relative; height: auto; border-right: none; border-bottom: 1px solid var(--rule); padding: 18px; } main { padding: 28px 22px 64px; } header.title-block h1 { font-size: 26px; } }
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside>
+    <div class="brand">Chat App Plan</div>
+    <div class="brand-sub">v2 &middot; 2026-05-18</div>
+    <nav>
+      <ol>
+        <li><a href="#sec-1">What we're building</a></li>
+        <li><a href="#sec-2">Architecture</a></li>
+        <li><a href="#sec-3">Config &amp; secrets</a></li>
+        <li><a href="#sec-4">Quirk handling map</a></li>
+        <li><a href="#sec-5">Module breakdown</a></li>
+        <li><a href="#sec-6">Tool-call protocol</a></li>
+        <li><a href="#sec-7">Cancellation design</a></li>
+        <li><a href="#sec-8">Data flow</a></li>
+        <li><a href="#sec-9">Validator mode</a></li>
+        <li><a href="#sec-10">What we're NOT building</a></li>
+        <li><a href="#sec-11">Success criteria</a></li>
+        <li><a href="#sec-12">Revisions from v1</a></li>
+      </ol>
+    </nav>
+  </aside>
+  <main>
+
+    <header class="title-block">
+      <h1>Chat App Build Plan <small style="font-size:0.5em;color:var(--muted)">(v2 &mdash; post-review)</small></h1>
+      <div class="subtitle">Minimal streaming CLI chat with tool calling. Revised after Codex review to fix cancellation design, config loading, tool-call protocol, and add a validator.</div>
+      <dl>
+        <dt>Target file</dt>      <dd><code>chat.py</code> (single file, project root)</dd>
+        <dt>Target size</dt>      <dd>240&ndash;300 lines (hard cap 400 per assignment)</dd>
+        <dt>LLM</dt>              <dd>OpenAI <code>gpt-5.4-mini</code> via official SDK &mdash; read from <code>config.yaml</code></dd>
+        <dt>HTTP client</dt>      <dd><code>httpx.AsyncClient</code> (one shared instance)</dd>
+        <dt>Runtime</dt>          <dd><code>asyncio</code> &mdash; required for cancellation + streaming</dd>
+        <dt>Deps</dt>             <dd><code>openai</code>, <code>httpx</code>, <code>python-dotenv</code>, <code>pyyaml</code> (all in <code>requirements.txt</code>)</dd>
+        <dt>Env</dt>              <dd><code>conda activate elyosai</code></dd>
+      </dl>
+    </header>
+
+    <!-- 1 -->
+    <section class="section" id="sec-1">
+      <h2><span class="num">01</span>What we're building</h2>
+      <p>A single-file async CLI chat application that:</p>
+      <ol>
+        <li>Reads model name from <code>config.yaml</code>, validates against <code>allowed_models.csv</code>, loads secrets from <code>.env</code></li>
+        <li>Accepts text input in a <code>You:</code> prompt loop</li>
+        <li>Streams the LLM response token-by-token to the terminal</li>
+        <li>Supports two tools via OpenAI function calling: <code>get_weather</code> and <code>research_topic</code></li>
+        <li>Shows pending state during tool calls (<code>"Researching solar energy... (Ctrl+C to cancel)"</code>)</li>
+        <li>Handles Ctrl+C: cancels the current turn task via <code>asyncio.CancelledError</code>, preserves partial output, returns to prompt</li>
+        <li>Handles every API quirk discovered in the probes</li>
+        <li>Maintains conversation history across turns</li>
+        <li>Supports <code>--validate</code> mode: feeds fixture dicts through parsers to verify correctness without API calls</li>
+      </ol>
+    </section>
+
+    <!-- 2 -->
+    <section class="section" id="sec-2">
+      <h2><span class="num">02</span>Architecture</h2>
+
+      <pre><code>chat.py
+  |
+  +-- load_config()               # read config.yaml, validate model, load .env
+  |
+  +-- main()                      # input loop, SIGINT handler, conversation history
+  |     |
+  |     +-- [turn task]           # each turn runs as asyncio.create_task()
+  |           |
+  |           +-- stream_turn()   # stream OpenAI, detect tool calls, recurse
+  |                 |
+  |                 +-- execute_tool()   # dispatch + pending state + JSON envelope
+  |                 |     |
+  |                 |     +-- call_api()          # httpx GET + throttle retry
+  |                 |     +-- normalise_weather() # Shape A/B -> unified
+  |                 |     +-- parse_research()    # fresh/cached/truncated/timeout
+  |                 |
+  |                 +-- (recurse with tool results, max 5 rounds)
+  |
+  +-- validate()                  # --validate mode: fixture tests, no API
+  +-- TOOLS = [...]               # OpenAI function definitions
+  +-- SYSTEM_PROMPT = "..."       # system message</code></pre>
+    </section>
+
+    <!-- 3 -->
+    <section class="section" id="sec-3">
+      <h2><span class="num">03</span>Config &amp; secrets loading</h2>
+
+      <p>Per <code>north_stars.md</code> rule 2: "Model names are config-driven. Never hardcode model strings in calling code."</p>
+
+      <h3>Startup sequence</h3>
+      <ol>
+        <li>Load <code>.env</code> via <code>python-dotenv</code>.</li>
+        <li>Read <code>config.yaml</code> &rarr; extract <code>llm.model_name</code>, <code>elyos_api.base_url</code>, <code>elyos_api.api_key_env</code>.</li>
+        <li>Validate <code>llm.model_name</code> exists in <code>allowed_models.csv</code> with <code>type=text</code>. Fail loudly if not.</li>
+        <li>Check <code>os.environ[ELYOS_API_KEY]</code> and <code>os.environ[OPENAI_API_KEY]</code> are set. Fail loudly if missing. Never print values.</li>
+        <li>Init <code>openai.AsyncOpenAI()</code> and <code>httpx.AsyncClient()</code>.</li>
+      </ol>
+
+      <h3>Config change needed</h3>
+      <p>Update <code>config.yaml</code> <code>llm.model_name</code> from <code>"anthropic/claude-sonnet-4-6"</code> to <code>"gpt-5.4-mini"</code> (user's choice, confirmed). Both are in <code>allowed_models.csv</code>.</p>
+
+<pre><code>def load_config():
+    with open(PROJECT_ROOT / "config.yaml") as f:
+        cfg = yaml.safe_load(f)
+    model = cfg["llm"]["model_name"]
+    allowed = {r["model"] for r in csv.DictReader(open(ALLOWED_MODELS))}
+    if model not in allowed:
+        sys.exit(f"Model {model!r} not in allowed_models.csv")
+    api_key_var = cfg["elyos_api"]["api_key_env"]
+    if not os.environ.get(api_key_var):
+        sys.exit(f"Missing env var: {api_key_var}")
+    if not os.environ.get("OPENAI_API_KEY"):
+        sys.exit("Missing env var: OPENAI_API_KEY")
+    return cfg</code></pre>
+    </section>
+
+    <!-- 4 -->
+    <section class="section" id="sec-4">
+      <h2><span class="num">04</span>Quirk handling map</h2>
+
+      <table>
+        <thead><tr><th>Quirk (from probes)</th><th>Where handled</th><th>How</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Throttle is HTTP 200 body-side</strong></td>
+            <td><code>call_api()</code></td>
+            <td>Parse every 200 body for <code>"status":"throttled"</code>. Sleep <code>retry_after_seconds + 1</code>. Max 5 retries. Print <code>"Rate limited, waiting Ns..."</code>.</td>
+          </tr>
+          <tr>
+            <td><strong>/weather dual schema (A flat / B array)</strong></td>
+            <td><code>normalise_weather()</code></td>
+            <td>Check for <code>"temperature_c"</code> (A) vs <code>"conditions"</code> (B). Normalise into <code>{"location", "observations": [...]}</code>.</td>
+          </tr>
+          <tr>
+            <td><strong>/weather fuzzy match (Mars&rarr;Marseille)</strong></td>
+            <td><code>normalise_weather()</code></td>
+            <td>Include both <code>requested_location</code> and <code>returned_location</code> in the envelope.</td>
+          </tr>
+          <tr>
+            <td><strong>/research empty <code>{}</code> (~15s timeout)</strong></td>
+            <td><code>parse_research()</code></td>
+            <td>Detect empty dict &rarr; <code>{"kind":"timeout"}</code>.</td>
+          </tr>
+          <tr>
+            <td><strong>/research cached schema (2024)</strong></td>
+            <td><code>parse_research()</code></td>
+            <td>Detect <code>cached:true</code> &rarr; include staleness warning.</td>
+          </tr>
+          <tr>
+            <td><strong>/research truncation at 50 chars</strong></td>
+            <td><code>parse_research()</code></td>
+            <td>Detect <code>truncated:true</code> &rarr; include <code>processed_topic</code>.</td>
+          </tr>
+          <tr>
+            <td><strong>Cancelled calls consume throttle slots</strong></td>
+            <td><code>main()</code></td>
+            <td>After cancel, do NOT auto-retry. Next call handles throttle via retry loop.</td>
+          </tr>
+          <tr>
+            <td><strong>401 / 404 / 422 errors</strong></td>
+            <td><code>call_api()</code></td>
+            <td>Return structured error dict with status code + message.</td>
+          </tr>
+          <tr>
+            <td><strong>Prompt injection at <code>/</code> root</strong></td>
+            <td><code>execute_tool()</code></td>
+            <td>Tool results wrapped in JSON envelope: <code>{"source":"elyos_api","untrusted":true,"data":...}</code>. Long echoed fields capped at 200 chars.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 5 -->
+    <section class="section" id="sec-5">
+      <h2><span class="num">05</span>Module breakdown</h2>
+
+      <table>
+        <thead><tr><th>Function</th><th>~LOC</th><th>Responsibility</th></tr></thead>
+        <tbody>
+          <tr><td><code>load_config()</code></td><td>15</td><td>Read config.yaml, validate model against allowed_models.csv, check env vars.</td></tr>
+          <tr><td><code>call_api(client, base, endpoint, params, key)</code></td><td>25</td><td>GET request. 20s timeout for /research, 15s for /weather. Throttle retry (max 5). Returns parsed JSON or error dict.</td></tr>
+          <tr><td><code>normalise_weather(data, requested)</code></td><td>12</td><td>Shape A/B &rarr; unified <code>{"requested_location","returned_location","observations"}</code>.</td></tr>
+          <tr><td><code>parse_research(data)</code></td><td>18</td><td>Classifies as fresh/cached/truncated/timeout. Returns dict with <code>kind</code> + fields.</td></tr>
+          <tr><td><code>execute_tool(client, cfg, name, args)</code></td><td>20</td><td>Dispatch to weather or research. Print pending state. Build JSON envelope (cap long fields at 200 chars). Return serialized string.</td></tr>
+          <tr><td><code>stream_turn(oai, client, cfg, messages)</code></td><td>60</td><td>Stream OpenAI completion. Accumulate tool-call deltas. Execute tools per OpenAI protocol. Recurse with max 5 rounds. Returns partial_content string.</td></tr>
+          <tr><td><code>main()</code></td><td>35</td><td>Load config, init clients, SIGINT handler cancels turn task, input loop, partial-output preservation.</td></tr>
+          <tr><td><code>validate()</code></td><td>25</td><td><code>--validate</code> mode: feed fixture dicts through <code>normalise_weather</code> and <code>parse_research</code>, assert expected outputs.</td></tr>
+          <tr><td>Constants + <code>TOOLS</code> + system prompt</td><td>40</td><td>Tool definitions, system message.</td></tr>
+        </tbody>
+      </table>
+
+      <p><strong>Total estimate: ~250 LOC.</strong> Under the 400-line ceiling with margin.</p>
+    </section>
+
+    <!-- 6 -->
+    <section class="section" id="sec-6">
+      <h2><span class="num">06</span>Tool-call protocol (OpenAI Chat Completions)</h2>
+
+      <p>This is the exact message sequence. Getting it wrong means tool calling silently breaks.</p>
+
+      <h3>6.1 Streaming with tool calls</h3>
+<pre><code>stream = await oai.chat.completions.create(
+    model=model_name,     # from config.yaml
+    messages=messages,
+    tools=TOOLS,
+    stream=True,
+)
+
+content_parts = []
+tool_calls = {}       # index -> {id, name, arguments_buffer}
+
+async for chunk in stream:
+    delta = chunk.choices[0].delta
+    if delta.content:
+        print(delta.content, end="", flush=True)
+        content_parts.append(delta.content)
+    if delta.tool_calls:
+        for tc_delta in delta.tool_calls:
+            idx = tc_delta.index
+            if idx not in tool_calls:
+                tool_calls[idx] = {"id": tc_delta.id, "name": tc_delta.function.name, "args": ""}
+            if tc_delta.function.arguments:
+                tool_calls[idx]["args"] += tc_delta.function.arguments</code></pre>
+
+      <h3>6.2 After stream ends: execute tools and recurse</h3>
+<pre><code>if tool_calls:
+    # Step 1: append the assistant message WITH tool_calls
+    messages.append({
+        "role": "assistant",
+        "content": "".join(content_parts) or None,
+        "tool_calls": [
+            {"id": tc["id"], "type": "function",
+             "function": {"name": tc["name"], "arguments": tc["args"]}}
+            for tc in tool_calls.values()
+        ],
+    })
+
+    # Step 2: execute each tool, append role:"tool" messages
+    for tc in tool_calls.values():
+        args = json.loads(tc["args"])
+        result_str = await execute_tool(client, cfg, tc["name"], args)
+        messages.append({
+            "role": "tool",
+            "tool_call_id": tc["id"],
+            "content": result_str,
+        })
+
+    # Step 3: recurse (make another streaming call with tool results)
+    round_count += 1
+    if round_count >= MAX_TOOL_ROUNDS:
+        print("[Max tool rounds reached]")
+        return
+    return await stream_turn(oai, client, cfg, messages, round_count)
+else:
+    # No tool calls — final assistant text
+    full_content = "".join(content_parts)
+    print()
+    messages.append({"role": "assistant", "content": full_content})
+    return full_content</code></pre>
+
+      <div class="callout warn">
+        <p><strong><code>MAX_TOOL_ROUNDS = 5</code></strong> prevents infinite recursion if the LLM keeps requesting tools. In normal use we expect 1&ndash;2 rounds (tool call + final response).</p>
+      </div>
+    </section>
+
+    <!-- 7 -->
+    <section class="section" id="sec-7">
+      <h2><span class="num">07</span>Cancellation design <span class="tag rev">revised</span></h2>
+
+      <div class="callout danger">
+        <p><strong>v1 was wrong.</strong> In <code>asyncio.run()</code>, SIGINT cancels the main task with <code>asyncio.CancelledError</code>, not <code>KeyboardInterrupt</code>. Relying on <code>KeyboardInterrupt</code> is brittle. v2 uses a custom SIGINT handler that cancels only the current turn task.</p>
+      </div>
+
+      <h3>7.1 Mechanism</h3>
+      <ol>
+        <li><strong><code>main()</code> installs a SIGINT handler</strong> via <code>loop.add_signal_handler(signal.SIGINT, ...)</code>. This overrides <code>asyncio.run</code>'s default SIGINT-cancels-main behaviour.</li>
+        <li><strong>Each turn runs as <code>asyncio.create_task(stream_turn(...))</code>.</strong></li>
+        <li><strong>SIGINT handler calls <code>turn_task.cancel()</code></strong> if a task is running. If no task is running (e.g. during <code>input()</code>), it raises <code>KeyboardInterrupt</code> to exit the app.</li>
+        <li><strong><code>main()</code> catches <code>asyncio.CancelledError</code></strong> from the turn task.</li>
+      </ol>
+
+      <h3>7.2 Partial output preservation</h3>
+      <p>Per <code>north_stars.md</code> rule 5: "preserve partial LLM response in history."</p>
+      <ul>
+        <li><code>stream_turn()</code> accumulates <code>content_parts</code> as tokens arrive.</li>
+        <li>On <code>CancelledError</code>, <code>main()</code> checks if any content was printed.</li>
+        <li>If yes: keep the user message, append a partial assistant message marked <code>" [interrupted]"</code>.</li>
+        <li>If no (cancelled during tool call before any text): remove the user message entirely.</li>
+      </ul>
+
+      <h3>7.3 Code sketch</h3>
+<pre><code>_turn_task = None
+
+def _on_sigint():
+    if _turn_task and not _turn_task.done():
+        _turn_task.cancel()
+    else:
+        raise KeyboardInterrupt
+
+async def main():
+    cfg = load_config()
+    loop = asyncio.get_running_loop()
+    loop.add_signal_handler(signal.SIGINT, _on_sigint)
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+
+    async with httpx.AsyncClient() as http_client:
+        oai = openai.AsyncOpenAI()
+        while True:
+            try:
+                user_input = await asyncio.to_thread(input, "\nYou: ")
+            except (EOFError, KeyboardInterrupt):
+                break
+            if user_input.strip().lower() in ("quit", "exit", "q"):
+                break
+
+            messages.append({"role": "user", "content": user_input})
+            print("Assistant: ", end="", flush=True)
+
+            global _turn_task
+            _turn_task = asyncio.create_task(
+                stream_turn(oai, http_client, cfg, messages)
+            )
+            try:
+                partial = await _turn_task
+            except asyncio.CancelledError:
+                print("\nCancelled.")
+                if partial_content_so_far:
+                    messages.append({"role": "assistant",
+                                     "content": partial_content_so_far + " [interrupted]"})
+                else:
+                    messages.pop()
+            finally:
+                _turn_task = None</code></pre>
+
+      <div class="callout info">
+        <p><strong>Note on <code>partial_content_so_far</code>:</strong> <code>stream_turn</code> needs a way to expose its accumulated content to the caller even on cancellation. A simple approach: store it on a mutable object (list) passed in, or use a module-level variable. The exact mechanism is an implementation detail.</p>
+      </div>
+    </section>
+
+    <!-- 8 -->
+    <section class="section" id="sec-8">
+      <h2><span class="num">08</span>Data flow</h2>
+
+      <h3>Happy path (weather query)</h3>
+<pre><code>User: "What's the weather in Tokyo?"
+  |
+  v  main() creates turn_task = stream_turn(messages)
+  |
+  v  OpenAI streams: tool_call(get_weather, {location: "Tokyo"})
+  |  (tool_calls dict accumulates id + args from deltas)
+  |
+  v  Stream ends. Append assistant msg with tool_calls to messages.
+  |
+  v  execute_tool("get_weather", {location: "Tokyo"})
+  |    -> prints "Looking up weather for Tokyo..."
+  |    -> call_api(http_client, "/weather", {location: "Tokyo"})
+  |    -> normalise_weather(response, "Tokyo")
+  |    -> JSON envelope: {"source":"elyos_api","untrusted":true,"data":{...}}
+  |    -> append {"role":"tool","tool_call_id":"...","content":"..."} to messages
+  |
+  v  Recurse: stream_turn(messages) again
+  |
+  v  OpenAI streams: "The weather in Tokyo is 28C and humid..."
+  |    -> printed token-by-token
+  |
+  v  Append assistant message. Return to prompt.</code></pre>
+
+      <h3>Cancellation path</h3>
+<pre><code>User: "Research quantum computing"
+  |
+  v  turn_task = stream_turn(messages)
+  |  OpenAI streams tool_call -> execute_tool()
+  |  prints "Researching quantum computing... (Ctrl+C to cancel)"
+  |  call_api() -> awaiting httpx for 3-8s...
+  |
+  [User presses Ctrl+C]
+  |
+  v  SIGINT handler fires -> turn_task.cancel()
+  v  CancelledError propagates through httpx -> stream_turn
+  v  main() catches CancelledError
+  v  No partial content was printed -> remove user message
+  v  prints "Cancelled."
+  v  Back to "You: " prompt. httpx client still healthy.</code></pre>
+
+      <h3>Throttle path</h3>
+<pre><code>call_api() -> 200 OK, body: {"status":"throttled","retry_after_seconds":7}
+  |
+  v  prints "Rate limited, waiting 8s..."
+  v  await asyncio.sleep(8)  (cancellable if Ctrl+C)
+  v  retry same request
+  v  200 OK with real data -> return parsed JSON</code></pre>
+    </section>
+
+    <!-- 9 -->
+    <section class="section" id="sec-9">
+      <h2><span class="num">09</span>Validator mode (<code>--validate</code>)</h2>
+
+      <p>Per <code>north_stars.md</code>: "No pytest. Use simple Python test scripts." A <code>--validate</code> flag feeds fixture dicts through the parsers.</p>
+
+<pre><code>def validate():
+    # Weather Shape A
+    a = normalise_weather(
+        {"location":"London","temperature_c":14.0,"condition":"Partly cloudy","humidity":67},
+        "London")
+    assert a["returned_location"] == "London"
+    assert len(a["observations"]) == 1
+
+    # Weather Shape B
+    b = normalise_weather(
+        {"location":"Paris","conditions":[
+            {"temperature_c":13.2,"condition":"Overcast","humidity":88},
+            {"temperature_c":12.2,"condition":"light rain","humidity":100}],
+         "note":"Multiple conditions reported"},
+        "Paris")
+    assert len(b["observations"]) == 2
+
+    # Weather fuzzy match
+    m = normalise_weather(
+        {"location":"Marseille","temperature_c":20.0,"condition":"Sunny","humidity":55},
+        "Mars")
+    assert m["requested_location"] == "Mars"
+    assert m["returned_location"] == "Marseille"
+
+    # Research fresh
+    rf = parse_research({"topic":"solar","summary":"...","sources":[],"generated_at":"2026-05-17T..."})
+    assert rf["kind"] == "fresh"
+
+    # Research cached
+    rc = parse_research({"topic":"climate","summary":"...","sources":[],"generated_at":"2024-03-15","cached":True,"cache_age_seconds":99})
+    assert rc["kind"] == "cached"
+
+    # Research truncated
+    rt = parse_research({"topic":"long...","summary":"...","sources":[],"generated_at":"...","truncated":True,"original_topic_length":62,"processed_topic":"first 50"})
+    assert rt["kind"] == "truncated"
+
+    # Research timeout
+    re = parse_research({})
+    assert re["kind"] == "timeout"
+
+    print("All validations passed.")
+
+if __name__ == "__main__":
+    if "--validate" in sys.argv:
+        validate()
+    else:
+        asyncio.run(main())</code></pre>
+    </section>
+
+    <!-- 10 -->
+    <section class="section" id="sec-10">
+      <h2><span class="num">10</span>What we're NOT building</h2>
+      <ul>
+        <li><span class="tag skip">skip</span> Full test suite &mdash; <code>--validate</code> covers parsers; manual tests cover the rest</li>
+        <li><span class="tag skip">skip</span> Fancy UI / Rich / curses &mdash; plain <code>print()</code> with <code>flush=True</code></li>
+        <li><span class="tag skip">skip</span> Voice / Deepgram / ElevenLabs (on-site scope)</li>
+        <li><span class="tag skip">skip</span> Multi-provider router or LiteLLM &mdash; one SDK, one provider</li>
+        <li><span class="tag skip">skip</span> Prompt-injection sanitiser (no active threat; JSON envelope is enough)</li>
+        <li><span class="tag skip">skip</span> Background job queue or retry persistence</li>
+      </ul>
+    </section>
+
+    <!-- 11 -->
+    <section class="section" id="sec-11">
+      <h2><span class="num">11</span>Success criteria</h2>
+
+      <table>
+        <thead><tr><th>#</th><th>Test</th><th>Expected</th></tr></thead>
+        <tbody>
+          <tr><td>0</td><td><code>python chat.py --validate</code></td><td>"All validations passed." &mdash; parsers handle all fixture shapes.</td></tr>
+          <tr><td>1</td><td><code>"What's the weather in London?"</code></td><td>Tool called, streaming response with temperature.</td></tr>
+          <tr><td>2</td><td><code>"Research solar energy"</code></td><td>Pending state shown, 3-8s wait, streaming summary.</td></tr>
+          <tr><td>3</td><td>Ctrl+C during research call</td><td>Prints "Cancelled.", returns to prompt. Next turn works.</td></tr>
+          <tr><td>4</td><td><code>"What's the weather on Mars?"</code></td><td>LLM notes the mismatch (Mars vs Marseille).</td></tr>
+          <tr><td>5</td><td><code>"Research climate change"</code></td><td>Cached data surfaced; LLM mentions staleness.</td></tr>
+          <tr><td>6</td><td>Rapid-fire 6+ queries</td><td>Throttle handled transparently with wait message.</td></tr>
+          <tr><td>7</td><td><code>"quit"</code></td><td>Clean exit.</td></tr>
+          <tr><td>8</td><td>Multi-turn follow-up</td><td>Context preserved across turns.</td></tr>
+          <tr><td>9</td><td>Ctrl+C mid-stream (LLM typing)</td><td>Partial text preserved with [interrupted] marker.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 12 -->
+    <section class="section" id="sec-12">
+      <h2><span class="num">12</span>Revisions from v1</h2>
+      <p>Changes made after Codex review:</p>
+
+      <table>
+        <thead><tr><th>Codex finding</th><th>Severity</th><th>What changed</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Cancellation relied on <code>KeyboardInterrupt</code></td>
+            <td><span class="tag must">P1</span></td>
+            <td>Redesigned: custom SIGINT handler cancels only the turn task via <code>CancelledError</code>. Partial assistant output preserved per north_stars rule 5. See &sect;7.</td>
+          </tr>
+          <tr>
+            <td>Model hardcoded, config.yaml ignored</td>
+            <td><span class="tag must">P1</span></td>
+            <td>Added <code>load_config()</code>: reads <code>config.yaml</code>, validates model against <code>allowed_models.csv</code>, checks env vars. See &sect;3.</td>
+          </tr>
+          <tr>
+            <td>Tool-call continuation underspecified</td>
+            <td><span class="tag must">P1</span></td>
+            <td>Spelled out exact OpenAI protocol: assistant msg with <code>tool_calls</code> &rarr; <code>role:"tool"</code> msgs &rarr; recurse. Added <code>MAX_TOOL_ROUNDS=5</code> guard. See &sect;6.</td>
+          </tr>
+          <tr>
+            <td>No validation beyond manual tests</td>
+            <td><span class="tag nice">P2</span></td>
+            <td>Added <code>--validate</code> mode: fixture dicts through parsers. ~25 LOC. See &sect;9.</td>
+          </tr>
+          <tr>
+            <td>Tool envelope was text prefix</td>
+            <td><span class="tag nice">P2</span></td>
+            <td>Changed to JSON envelope <code>{"source":"elyos_api","untrusted":true,"data":...}</code>. Long echoed fields capped at 200 chars. See &sect;4.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <footer>
+      <p>Plan v2 authored 2026-05-18. Revised after Codex review. Target: <code>chat.py</code> in project root, 240&ndash;300 LOC, <code>conda activate elyosai &amp;&amp; python chat.py</code>.</p>
+    </footer>
+
+  </main>
+</div>
+</body>
+</html>

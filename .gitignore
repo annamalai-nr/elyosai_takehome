@@ -1,0 +1,58 @@
+# Secrets and environment
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+venv/
+.conda/
+*.egg-info/
+.pytest_cache/
+.coverage
+.mypy_cache/
+.ruff_cache/
+.python-version
+
+# Node / frontend
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/node_modules/.tmp/
+*.tsbuildinfo
+
+# Build / dist
+dist/
+build/
+
+# Claude / Playwright
+.claude/
+.playwright-mcp/
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/*
+!.vscode/settings.json
+
+# Office lock files
+~$*
+
+# Logs
+*.log
+logs/
+
+# Local raw probe outputs — never commit, contain API responses
+weather_*.raw
+research_*.raw
+backend/outputs/
+backend/logs/
+
+# Other project files/folders
+_archive/

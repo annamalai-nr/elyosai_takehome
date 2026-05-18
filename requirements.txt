@@ -1,0 +1,48 @@
+# Ported from /Users/annamalainarayanan/Desktop/personal/bcai/eugenix_cp2/requirements.txt
+# Kept broad so the same env can also support the on-site pair-programming
+# session, which adds Twilio + ElevenLabs + websockets. For the take-home
+# itself (CLI streaming chat against /weather and /research), only the LLM
+# SDKs, python-dotenv, httpx, and pyyaml are strictly needed.
+
+# Web Framework
+fastapi
+uvicorn[standard]
+python-multipart
+websockets
+
+# Telephony
+twilio
+
+# Voice / TTS
+elevenlabs
+
+# Scheduling
+apscheduler
+
+# Database
+pymongo
+
+# AI/ML Libraries
+litellm
+google-genai
+openai
+anthropic
+langchain-core
+langchain-litellm
+
+# Data Validation
+pydantic
+pydantic-settings
+
+# Utilities
+python-dotenv
+pyyaml
+httpx
+python-dateutil
+
+# Development
+black
+flake8
+
+# env setup
+python-dotenv
