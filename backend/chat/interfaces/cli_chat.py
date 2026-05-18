@@ -10,11 +10,10 @@ from backend.chat.prompts import SYSTEM_PROMPT
 
 _turn_task: asyncio.Task | None = None
 
-EXIT_COMMANDS: set[str] = {"quit", "exit", "q"}
+EXIT_COMMANDS: frozenset[str] = frozenset({"quit", "exit", "q"})
 
 
 def _on_sigint() -> None:
-    global _turn_task
     if _turn_task and not _turn_task.done():
         _turn_task.cancel()
     else:

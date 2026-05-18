@@ -3,7 +3,7 @@
 - **Date:** 2026-05-18
 - **Discovered via:** LangSmith trace inspection of an end-to-end chat turn
 - **Severity:** High (the chat app silently fabricates "research" content)
-- **Status:** Open
+- **Status:** Fixed (Round 2)
 
 ---
 

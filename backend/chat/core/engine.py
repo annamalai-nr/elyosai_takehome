@@ -11,13 +11,12 @@ logging.getLogger("LiteLLM").setLevel(logging.ERROR)
 import litellm  # noqa: E402
 from langsmith import traceable
 
-# Forward every LLM call to LangSmith. Config via LANGSMITH_* env vars in .env.
+from backend.chat.core.parsers import envelope, normalise_weather, parse_research, truncate
+from backend.chat.prompts import TOOLS
+
 litellm.callbacks = ["langsmith"]
 
 log = logging.getLogger(__name__)
-
-from backend.chat.core.parsers import envelope, normalise_weather, parse_research, truncate
-from backend.chat.prompts import TOOLS
 
 MAX_TOOL_ROUNDS: int = 5
 MAX_THROTTLE_RETRIES: int = 5
@@ -97,7 +96,7 @@ def _llm_kwargs(cfg: dict) -> dict[str, Any]:
     llm_cfg = cfg["llm"]
     kwargs: dict[str, Any] = {"max_tokens": llm_cfg.get("max_tokens", 1500)}
 
-    reasoning = llm_cfg.get("reasoning_effort", "none")
+    reasoning = llm_cfg.get("reasoning_effort")
     if reasoning and reasoning != "none":
         kwargs["reasoning_effort"] = reasoning
     if "temperature" in llm_cfg:
@@ -109,15 +108,13 @@ def _llm_kwargs(cfg: dict) -> dict[str, Any]:
 def _accumulate_tool_call(tool_calls: dict[int, dict], tc_delta: Any) -> None:
     """Merge a single streaming tool-call delta into the accumulator dict."""
     idx = tc_delta.index
-    if idx not in tool_calls:
-        tool_calls[idx] = {"id": tc_delta.id, "name": tc_delta.function.name or "", "args": ""}
-    else:
-        if tc_delta.id:
-            tool_calls[idx]["id"] = tc_delta.id
-        if tc_delta.function.name:
-            tool_calls[idx]["name"] = tc_delta.function.name
+    entry = tool_calls.setdefault(idx, {"id": "", "name": "", "args": ""})
+    if tc_delta.id:
+        entry["id"] = tc_delta.id
+    if tc_delta.function.name:
+        entry["name"] = tc_delta.function.name
     if tc_delta.function.arguments:
-        tool_calls[idx]["args"] += tc_delta.function.arguments
+        entry["args"] += tc_delta.function.arguments
 
 
 @traceable(run_type="chain", name="chat_turn")

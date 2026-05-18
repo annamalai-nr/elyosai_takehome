@@ -18,7 +18,6 @@ PROVIDER_ENV: dict[str, str] = {
 
 
 def _require_env(var_name: str) -> None:
-    """Exit with a clear message if an env var is missing."""
     if not os.environ.get(var_name):
         sys.exit(f"Missing env var: {var_name}")
 
@@ -40,12 +39,9 @@ def load_config() -> dict[str, Any]:
     if row.get("type") != "text":
         sys.exit(f"Model {model!r} is type={row.get('type')!r}, but backend.chat requires a text model")
 
-    provider = row.get("provider")
+    provider = row.get("provider", "")
     if provider not in PROVIDER_ENV:
-        sys.exit(
-            f"Model {model!r} is provider={provider!r}, but backend.chat supports only "
-            f"OpenAI and Anthropic through LiteLLM"
-        )
+        sys.exit(f"Model {model!r} has unsupported provider={provider!r} (need openai or anthropic)")
 
     _require_env(PROVIDER_ENV[provider])
     _require_env(cfg["elyos_api"]["api_key_env"])

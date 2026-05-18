@@ -39,6 +39,10 @@ Builds a CLI streaming chat application that calls two real-world APIs
 │   ├── research_probe_report.html             /research main probe (27 calls)
 │   └── research_cancellation_report.html      /research cancellation sidecar
 │
+├── case_studies/                      trace-driven debugging write-ups
+│   ├── 2026-05-18-research-api-hallucination.md   root cause + diagnosis
+│   └── fix-round-*                    iterative fix attempts
+│
 ├── backend/
 │   ├── __init__.py
 │   ├── chat/                          streaming CLI chat package
@@ -59,7 +63,8 @@ Builds a CLI streaming chat application that calls two real-world APIs
 │   │   └── litellm_kwargs.py
 │   ├── reference_docs/                allowed model names + LLM rules
 │   │   ├── allowed_models.csv
-│   │   └── llm_rules.md
+│   │   ├── llm_rules.md
+│   │   └── llm_prompting_guide.md
 │   ├── probes/                        the structured probe scripts
 │   │   ├── __init__.py
 │   │   ├── probe_weather.py
@@ -112,6 +117,24 @@ LLM calls go through [LiteLLM](https://docs.litellm.ai/) (Python SDK, not
 proxy). OpenAI and Anthropic text models from `allowed_models.csv` are
 supported — set `llm.model_name` in the config to switch providers.
 
+Operational logs go to stderr at INFO level (config load, throttle retries,
+API errors). Set `LOG_LEVEL=DEBUG` in `.env` for per-request tracing.
+
+### LangSmith tracing
+
+Every LLM call and tool execution is forwarded to
+[LangSmith](https://docs.smith.langchain.com/) via LiteLLM's built-in
+callback. Add these env vars to `.env`:
+
+```
+LANGSMITH_TRACING=true
+LANGSMITH_API_KEY=<your-key>
+LANGSMITH_PROJECT=<project-name>
+```
+
+Tracing is automatic — no code changes needed. If `LANGSMITH_TRACING` is
+unset or false, the callback is a no-op.
+
 ## Running the probes
 
 All probe scripts read `ELYOS_API_KEY` automatically from `.env` (at the
@@ -153,6 +176,16 @@ probe and one for each cancellation sidecar. The `research_probe_plan.html`
 in the same folder is the pre-execution plan that was approved before the
 research probe ran.
 
+## Case studies
+
+The `case_studies/` folder contains trace-driven debugging write-ups. The
+main one documents a research hallucination bug — the `/research` endpoint
+returns a generic template, and the LLM was expanding it with its own
+knowledge. The fix uses three established grounding techniques (grounding
+directive, refusal-as-valid-output, GOOD/BAD few-shot example) in the
+system prompt. See `2026-05-18-research-api-hallucination.md` for the
+root cause and `fix-round-*.md` for the iterative fix attempts.
+
 ## Take-home phases
 
 | Phase | What | Status | Where to read |
@@ -160,7 +193,7 @@ research probe ran.
 | 0. Setup | conda env, `.env`, `pip install -e .` | Done | this README |
 | 1. Investigation | probe `/weather` + `/research`, document findings | Done | `probe_reports/*.html` |
 | 2. Build | CLI streaming chat with tool calling | Done | `backend/chat/` |
-| 3. Harden | add handling for confirmed quirks | Done | `backend/chat/core/parsers.py` |
+| 3. Harden | add handling for confirmed quirks + fix research hallucination | Done | `backend/chat/core/parsers.py`, `case_studies/` |
 | 4. Loom | 10–15 min walkthrough | | take-home PDF §Part 2 |
 | 5. Submit | code + Loom + AI session transcript | | take-home PDF §Logistics |
 

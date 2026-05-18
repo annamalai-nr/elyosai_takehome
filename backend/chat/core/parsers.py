@@ -7,7 +7,6 @@ from backend.chat.core.models import NormalisedWeather, ResearchResult, WeatherO
 
 
 def _parse_observation(raw: dict) -> WeatherObservation:
-    """Build a WeatherObservation from a raw conditions dict."""
     return WeatherObservation(temp_c=raw["temperature_c"], condition=raw["condition"], humidity=raw["humidity"])
 
 
