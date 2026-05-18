@@ -1,10 +1,7 @@
 import asyncio
-import logging
 import signal
 
 import httpx
-
-logging.getLogger("LiteLLM").setLevel(logging.ERROR)
 
 from backend.chat.core.engine import stream_turn
 from backend.chat.load_config import load_config

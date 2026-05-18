@@ -1,9 +1,12 @@
 import asyncio
 import json
+import logging
 import os
 from typing import Any
 
 import httpx
+
+logging.getLogger("LiteLLM").setLevel(logging.ERROR)
 import litellm
 
 from backend.chat.core.parsers import envelope, normalise_weather, parse_research, truncate

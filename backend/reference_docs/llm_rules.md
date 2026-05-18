@@ -4,10 +4,10 @@ This file is ported from `eugenix_cp2/backend/reference_docs/llm_rules.md`.
 It documents the LiteLLM / ChatLiteLLM kwargs rules used by
 `backend/llm_utils/litellm_kwargs.py`.
 
-For the Elyos take-home itself, the recommended path is the **provider's
-official SDK** (OpenAI or Anthropic) — not LiteLLM. The rules below remain
-useful if you choose to route through LiteLLM, or for the on-site pair-
-programming session where real-time voice APIs come into scope.
+The Elyos take-home allows OpenAI, Anthropic, or similar. The original prompt
+recommends official SDKs, but `backend/chat/` deliberately uses the LiteLLM
+Python SDK for text LLM calls to support provider switching. Voice/realtime
+models remain out of scope for the take-home.
 
 ## Source of truth
 
