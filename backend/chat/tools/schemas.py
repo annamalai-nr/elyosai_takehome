@@ -1,3 +1,5 @@
+"""OpenAI-format tool schemas passed to the LLM."""
+
 TOOLS = [
     {
         "type": "function",

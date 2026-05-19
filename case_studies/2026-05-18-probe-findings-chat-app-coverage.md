@@ -1,31 +1,43 @@
-# Case Study: Probe Findings Are Only Partially Reflected in the Chat App
+# Case Study: Probe Findings to Chat-App Runtime Coverage
 
-- **Date:** 2026-05-18
-- **Discovered via:** Review of `backend/probes/`, `probe_reports/`, and the current `backend/chat/` runtime flow
-- **Severity:** Medium-high overall
-- **Status:** Open
+- **Original date:** 2026-05-18
+- **Updated:** 2026-05-19
+- **Reason for update:** The original audit was written before the ReAct refactor,
+  bounded-concurrency resilience harness, shared-rate-limit proof, and test
+  package cleanup. Several items previously marked open are now handled.
+- **Status:** Mostly handled, with a small set of documentation and test-polish
+  items still pending.
 
 ---
 
 ## TL;DR
 
-The probe work is extensive and high quality. It found concrete quirks in
-`/weather` and `/research`: dual schemas, body-side throttling, silent research
-timeouts, cached and truncated research variants, fuzzy weather matches,
-prompt-injection risk, and cancellation consuming throttle budget.
+The probe work is now substantially reflected in the chat app.
 
-The chat app captures many of the major runtime mechanics, but it does not yet
-fully capture the operational lessons from the probes. The most important gaps
-are:
+The current implementation handles the major correctness and trust risks:
 
-1. throttle and cancellation UX is too quiet,
-2. cancellation-budget behavior is not surfaced to the user,
-3. generic tool errors lack an explicit prompt rule,
-4. truncation responses could be more specific,
-5. probe findings are not traceably mapped to runtime handling.
+- weather schema A/B normalization,
+- weather fuzzy-match surfacing,
+- HTTP-200 throttle envelopes,
+- visible rate-limit waits and retry,
+- research timeout handling,
+- cached research without hardcoded date claims,
+- truncated research with `processed_topic`,
+- generic research-stub grounding,
+- untrusted tool-result envelopes,
+- valid ReAct tool-call protocol,
+- bounded tool concurrency,
+- shared Elyos rate-budget pacing,
+- cancellation warning and cross-turn budget persistence.
 
-The app is not fundamentally broken. The next work should be a focused hardening
-pass, not a broad refactor.
+The remaining gaps are no longer core agent-runtime failures. They are focused
+cleanup items:
+
+1. add or update a `DISCOVERIES.md` implementation matrix,
+2. recursively truncate nested string fields in tool error bodies,
+3. add a direct test for `rate_limit_safety_s`,
+4. update stale README / CLI help references after the test-package rename,
+5. optionally add a docstring to `backend/probes/__init__.py`.
 
 ---
 
@@ -44,6 +56,7 @@ Generated probe reports:
 - `probe_reports/weather_cancellation_report.html`
 - `probe_reports/research_probe_report.html`
 - `probe_reports/research_cancellation_report.html`
+- `probe_reports/shared_rate_limit_bucket_report.html`
 
 Current chat-app implementation areas:
 
@@ -54,7 +67,9 @@ Current chat-app implementation areas:
 - `backend/chat/tools/`
 - `backend/chat/prompts.py`
 - `backend/chat/interfaces/cli_chat.py`
-- `backend/chat/validate.py`
+- `backend/chat/tests/`
+- `backend/chat/config.yaml`
+- `backend/chat/load_config.py`
 
 ---
 
@@ -65,9 +80,10 @@ The chat app should behave like a small resilient tool-using agent runtime:
 - Treat API output as untrusted data.
 - Normalize every known response shape before giving it to the LLM.
 - Preserve API evidence fields instead of hardcoding probe-derived assumptions.
-- Make slow, throttled, cancelled, stale, truncated, and mismatched states visible
-  to the user.
+- Make slow, throttled, cancelled, cached, truncated, and mismatched states
+  visible to the user.
 - Ground research answers strictly in the tool result.
+- Use bounded concurrency where useful, but respect the shared Elyos rate budget.
 - Keep the implementation small and readable.
 
 The goal is not to copy every probe detail into production code. The goal is to
@@ -76,104 +92,107 @@ handling.
 
 ---
 
-## Current Coverage Summary
+## Current Coverage Matrix
 
-| Probe finding | Current chat-app coverage | Assessment |
+| Probe finding | Runtime handling | Status |
 |---|---|---|
-| `/weather` has two success schemas | `normalise_weather()` handles flat and nested `conditions` shapes | Good |
-| Weather fuzzy match, e.g. Mars -> Marseille | Parser preserves `requested_location` and `returned_location`; prompt tells model to surface mismatch | Good |
-| HTTP 200 throttle envelope | `call_api()` inspects 200 bodies and retries on `status="throttled"` | Good core handling; weak UX |
-| `/research` empty `{}` after ~15s | `parse_research()` maps empty dict to timeout result | Good |
-| `/research` cached schema | `parse_research()` maps cached payload to `kind="cached"` and preserves API-provided freshness fields | Good |
-| `/research` truncated schema | `parse_research()` preserves `processed_topic` and `original_topic_length` | Good core handling; response detail could improve |
-| Prompt-injection / echoed adversarial text | Tool output envelope marks data as untrusted; long fields capped | Good |
-| Research API returns generic stubs | Prompt now tells LLM to use only `summary` and `sources` | Good after case-study fix |
-| Cancelled API calls consume throttle slots | CLI cancels cleanly but does not track cancellation budget impact | Gap |
-| Throttle waits can be long | Retry loop waits internally | Gap in user-visible pending state |
-| Concurrent research can exhaust retry budget | Tool calls are serialized | Good practical mitigation, but should be documented as intentional |
-| Probe findings should be explainable in Loom | Reports exist, but no implementation matrix | Gap |
+| `/weather` has flat and nested success schemas | `normalise_weather()` handles flat `temperature_c` and nested `conditions` shapes | Handled |
+| Weather fuzzy match, e.g. `Mars` -> `Marseille` | Parser preserves `requested_location` and `returned_location`; prompt tells model to surface mismatch | Handled |
+| Some impossible locations can still return plausible weather | Cannot be reliably detected from the API payload alone without an external location validator | Out of scope |
+| Throttling can arrive as HTTP 200 body with `status="throttled"` | `elyos_client._call_api()` inspects JSON body, waits, and retries | Handled |
+| Throttle waits can be long | CLI prints visible rate-limit retry waits | Handled |
+| `/weather` and `/research` share effective rate budget | Confirmed by controlled probe; `config.yaml` uses shared `rate_limit_group: elyos_api` | Handled |
+| Local rate window can be optimistic at boundary | `rate_limit_safety_s` extends client-side pacing window | Handled, needs direct test |
+| Cancellation consumes server-side throttle budget | CLI warns on cancellation; session `rate_budgets` persist across turns | Handled |
+| Concurrent calls can exhaust budget | Agent uses bounded concurrency plus shared-budget pacing | Handled |
+| `/research` can return `{}` after timeout | `parse_research()` maps empty dict to `kind="timeout"` | Handled |
+| HTTP timeout can be intermittent | `elyos_client._call_api()` retries timeout according to endpoint config | Handled |
+| `/research` can return cached payloads | Parser preserves `generated_at`, `cache_age_seconds`, and human-readable `cache_age` | Handled |
+| Cached research must not hardcode 2024 | Parser no longer injects stale-warning date; prompt forbids invented dates | Handled |
+| `/research` can truncate long topics | Parser preserves `processed_topic` and `original_topic_length`; prompt tells model to show processed topic | Handled |
+| `/research` often returns generic stubs | Prompt requires answers to use only `summary` and `sources`; generic summaries should be acknowledged as generic | Handled |
+| Prompt-injection risk from API/tool data | Tool output is wrapped in an untrusted JSON envelope; prompt treats `data` as external information | Handled |
+| Long user-controlled fields should not flood LLM context | Top-level `topic`, `summary`, and `message` are capped in `envelope()` | Partial |
+| Nested error bodies can contain long strings | No recursive truncation yet | Pending |
+| Tool-call protocol must be valid | `LLMTurn.assistant_message`, tool observations, and bounded ReAct rounds preserve protocol | Handled |
+| Probe findings should be easy to explain in the Loom | Reports exist, but no current `DISCOVERIES.md` matrix | Pending |
 
 ---
 
 ## P0 Issues
 
-P0 issues are correctness or safety failures. They can cause hallucination,
-silent failure, unsafe tool-data handling, or broken agent protocol.
+P0 issues are correctness or safety failures. The current code handles the known
+P0-class risks.
 
-### P0.1 Research Hallucination From Generic Stub Responses
+### P0.1 Research Hallucination From Generic Stub Responses - Handled
 
 **Probe finding**
 
-`/research` often returns a generic template summary such as:
+`/research` can return generic template summaries. If the LLM expands from its
+own knowledge, the answer looks tool-grounded but is actually hallucinated.
 
-```json
-{
-  "topic": "solar energy",
-  "summary": "Research summary for 'solar energy'. This analysis covers key aspects and recent developments in the field.",
-  "sources": ["nature.com", "sciencedirect.com", "arxiv.org"]
-}
-```
-
-The endpoint does not necessarily return real, detailed research. If the model
-expands from its own knowledge, the result looks like tool-grounded research but
-is actually hallucinated.
-
-**Required runtime behavior**
+**Required behavior**
 
 - For `research_topic`, answer only from `summary` and `sources`.
 - If the summary is generic, say it is generic.
 - Do not add facts not present in the tool result.
 - Treat a short honest response as correct.
 
-**Current status**
+**Current handling**
 
-Mostly handled by the current system prompt, after the research-hallucination
-case-study fix.
+`backend/chat/prompts.py` frames the assistant as a router and formatter, not a
+knowledge source. It explicitly restricts substantive research content to
+`summary` and `sources`, and includes a GOOD/BAD example for generic research
+output.
 
-**Recommended action**
+**Status**
 
-Keep the grounding directive and few-shot example. Do not move this logic into
-post-processing unless the prompt proves unreliable again.
+Handled.
 
 ---
 
-### P0.2 Tool Responses Must Stay Untrusted
+### P0.2 Tool Responses Must Stay Untrusted - Handled
 
 **Probe finding**
 
-Recon found prompt-injection content at the root endpoint. Research adversarial
-probes also showed that attacker-controlled topic text can be echoed back in API
-responses.
+Recon found prompt-injection risk in API-sourced content. User-controlled topic
+text can also be echoed back by the API.
 
-**Required runtime behavior**
+**Required behavior**
 
 - Never pass raw API bodies into the LLM context.
-- Always wrap tool results in a JSON envelope:
+- Always wrap tool results in a JSON envelope.
+- Mark data as untrusted.
+- Tell the LLM that API data is external information, not instructions.
+
+**Current handling**
+
+`backend/chat/parsers/__init__.py` wraps tool payloads as:
 
 ```json
 {
   "source": "elyos_api",
-  "tool": "research_topic",
+  "tool": "...",
   "untrusted": true,
   "data": {}
 }
 ```
 
-- Prompt must tell the LLM that `data` is external information, not instructions.
-- Long user-controlled fields should be capped before entering context.
+`backend/chat/prompts.py` tells the model to treat the `data` field as external
+information, not instructions.
 
-**Current status**
+**Status**
 
-Handled by `envelope()` and the system prompt.
+Handled.
 
-**Recommended action**
+**Remaining polish**
 
-Keep this invariant. Add a validator for long adversarial research topics if
-the validator suite is expanded.
+Nested string fields in error bodies are not recursively truncated. This is a P2
+cleanup item, not a current P0 failure.
 
 ---
 
-### P0.3 HTTP 200 Throttle Envelopes Must Not Be Treated as Success
+### P0.3 HTTP-200 Throttle Envelopes Must Not Be Treated as Success - Handled
 
 **Probe finding**
 
@@ -188,53 +207,51 @@ Both endpoints can return throttling as HTTP 200:
 }
 ```
 
-Naive code that only checks the HTTP status will feed throttle garbage into the
-LLM.
-
-**Required runtime behavior**
+**Required behavior**
 
 - Parse every 200 response body.
-- If `status == "throttled"`, sleep `retry_after_seconds + 1`.
+- If `status == "throttled"`, sleep based on `retry_after_seconds`.
 - Retry with a bounded retry count.
 - If retries exhaust, return a clean tool error envelope.
 
-**Current status**
+**Current handling**
 
-Core logic is handled in `call_api()`.
+`backend/chat/tools/elyos_client.py` checks body-side throttle envelopes,
+prints a visible retry message, waits with jitter, and retries up to the
+endpoint-configured budget.
 
-**Recommended action**
+**Status**
 
-Keep the body-side throttle parser. Improve user-visible wait messaging under
-P1.2.
+Handled.
 
 ---
 
-### P0.4 `/research` Empty `{}` Must Become Timeout, Not Content
+### P0.4 `/research` Empty `{}` Must Become Timeout, Not Content - Handled
 
 **Probe finding**
 
-`/research` can return literal `{}` after about 15 seconds. This is a silent
-server-side failure path.
+`/research` can return literal `{}` after a slow server-side path.
 
-**Required runtime behavior**
+**Required behavior**
 
 - Detect empty dict.
 - Convert to a structured timeout result.
-- Tell user research did not complete.
+- Tell the user research did not complete.
 - Do not let the LLM answer from its own knowledge.
 
-**Current status**
+**Current handling**
 
-Handled by `parse_research()`.
+`backend/chat/parsers/research.py` maps empty dict to
+`ResearchResult(kind="timeout", ...)`. The prompt tells the LLM to report
+timeouts and suggest retrying.
 
-**Recommended action**
+**Status**
 
-Keep as-is. Consider including endpoint and elapsed time later if useful, but
-that is not required for the take-home.
+Handled.
 
 ---
 
-### P0.5 Weather Schema A/B Must Both Parse
+### P0.5 Weather Schema A/B Must Both Parse - Handled
 
 **Probe finding**
 
@@ -243,316 +260,250 @@ that is not required for the take-home.
 - flat shape: `location`, `temperature_c`, `condition`, `humidity`
 - nested shape: `location`, `conditions`, optional `note`
 
-The shape can vary for the same city.
+**Current handling**
 
-**Required runtime behavior**
+`backend/chat/parsers/weather.py` normalizes both shapes into
+`NormalisedWeather`.
 
-- Normalize both shapes into one internal model.
-- Return an explicit unknown-schema error for new shapes.
+**Status**
 
-**Current status**
-
-Handled by `normalise_weather()`.
-
-**Recommended action**
-
-Keep as-is.
+Handled.
 
 ---
 
-### P0.6 Weather Fuzzy Match Must Be Visible
+### P0.6 Weather Fuzzy Match Must Be Visible - Handled
 
 **Probe finding**
 
 The API can silently fuzzy-match user input. Example: `Mars` can return
 `Marseille`.
 
-**Required runtime behavior**
+**Required behavior**
 
 - Preserve user-requested location.
 - Preserve API-returned location.
 - Tell the user if they differ.
 
-**Current status**
+**Current handling**
 
-Handled for detectable mismatches.
+`NormalisedWeather` stores both fields, and the prompt instructs the LLM to
+surface mismatches.
 
 **Limit**
 
 Cases like `Atlantis` returning plausible weather cannot be detected from the
-response alone without an external location validator. That is out of scope for
-this take-home.
+response alone. That would require a separate location-validity service, which
+is out of scope for this take-home.
+
+**Status**
+
+Handled for detectable mismatches.
 
 ---
 
-### P0.7 Tool-Call Protocol Must Stay Valid Across Rounds
+### P0.7 Tool-Call Protocol Must Stay Valid Across Rounds - Handled
 
-**Probe relevance**
-
-This is not an endpoint quirk, but it is required for the chat app to survive
-tool calls and retries.
-
-**Required runtime behavior**
+**Required behavior**
 
 - Assistant message includes `tool_calls`.
 - Each tool result is returned with matching `tool_call_id`.
 - Model is called again after tool results.
 - Tool rounds are bounded.
 
-**Current status**
+**Current handling**
 
-Handled in `stream_turn()`.
+`backend/chat/llm_client.py` accumulates streamed tool calls into `ToolCall`
+models. `backend/chat/agent.py` appends assistant messages and tool
+observations, then repeats up to `MAX_TOOL_ROUNDS`.
 
-**Recommended action**
+**Status**
 
-Keep `MAX_TOOL_ROUNDS`.
+Handled.
 
 ---
 
 ## P1 Issues
 
-P1 issues do not make the app unusable, but they prevent it from fully honoring
-the probe findings or create misleading user behavior.
+P1 issues affect user trust, robustness, or faithful probe handling. Most are
+now handled.
 
-### P1.1 Cached Research Messaging Must Stay Evidence-Based — Handled
+### P1.1 Cached Research Messaging Must Stay Evidence-Based - Handled
 
-**Probe finding**
+**Current handling**
 
-Cached research payloads can include `cached`, `cache_age_seconds`,
-`generated_at`, and sometimes date language inside `summary`.
+The parser preserves `generated_at`, `cache_age_seconds`, and `cache_age`.
+It does not manufacture a `stale_warning`. The prompt says cached results may be
+outdated, but dates should only be mentioned if present in the tool payload.
 
-**Current status**
+**Status**
 
-This was previously a gap. It is now handled.
-
-The current parser preserves `generated_at` and `cache_age_seconds`, computes a
-human-readable `cache_age`, and no longer injects a hardcoded stale warning.
-The validator also guards that `stale_warning` is absent from the envelope.
-The prompt tells the LLM to use API evidence only and not hardcode dates.
-
-**Required behavior**
-
-- Preserve `generated_at` if present.
-- Preserve `cache_age_seconds` if present.
-- For cached results, say the result is cached and may be outdated.
-- Mention a year or date only if the tool payload contains that evidence.
-- Do not hardcode `2024` in parser or prompt.
-
-**Recommended action**
-
-Keep the current evidence-based behavior and validator guard.
+Handled.
 
 ---
 
-### P1.2 Throttle Waits Should Be Visible to the User
+### P1.2 Throttle Waits Should Be Visible to the User - Handled
 
-**Probe finding**
+**Current handling**
 
-Throttle waits can add several seconds to half a minute. The API tells the
-client how long to wait in `retry_after_seconds`.
-
-**Current problem**
-
-The app retries internally. The terminal user sees a pending line, but not the
-actual rate-limit wait reason.
-
-**Required behavior**
-
-When throttled, print:
+`backend/chat/tools/elyos_client.py` prints concise status during throttle
+retry:
 
 ```text
-Rate limited; waiting 8s before retrying... (Ctrl+C to cancel)
+Rate-limited, retrying in Ns...
 ```
 
-This should be terminal UX, not LLM output.
+**Status**
 
-**Recommended fix**
-
-Add a small optional status callback or simple print inside `call_api()` when
-throttled. Keep it concise.
+Handled.
 
 ---
 
-### P1.3 Cancellation Should Track Budget Impact
+### P1.3 Cancellation Should Preserve Budget Impact - Handled
 
-**Probe finding**
+**Current handling**
 
-Cancellation consumes a throttle slot for both `/weather` and `/research`.
-Client-side cancellation does not free server-side budget.
+`backend/chat/interfaces/cli_chat.py` keeps a session-level state dictionary
+across turns. That state includes `rate_budgets` and `rate_budget_locks`, so the
+client-side budget is not reset after Ctrl+C. Cancellation also prints:
 
-**Current problem**
+```text
+Cancelled. The interrupted API call may still count against the rate limit.
+```
 
-The app cancels the turn cleanly, but it does not remember that the cancelled
-request likely consumed budget.
+**Status**
 
-**Required behavior**
+Handled.
 
-- On Ctrl+C during a tool call, record a recent cancellation timestamp.
-- If the user retries quickly, warn that the previous cancelled request may
-  still count against the rate limit.
-- If the next API call returns throttle, show `retry_after_seconds`.
+**Note**
+
+This is an approximate client-side model. The server remains authoritative, and
+body-side `retry_after_seconds` retry remains the final recovery mechanism.
+
+---
+
+### P1.4 Truncation Should Surface the Actual Processed Topic - Handled
+
+**Current handling**
+
+`parse_research()` preserves `processed_topic` and `original_topic_length`.
+The prompt tells the model to mention truncation and show `processed_topic`
+when present.
+
+**Status**
+
+Handled.
+
+---
+
+### P1.5 Error Responses Should Be User-Friendly and Specific - Partially Handled
+
+**Current handling**
+
+The prompt has an `<error_rules>` section telling the model to explain tool
+errors using only the provided `error` and `message` fields.
+
+**Remaining gap**
+
+`envelope()` only truncates top-level `topic`, `summary`, and `message` fields.
+It does not recursively cap strings nested inside error bodies, such as a
+FastAPI-style detail object or long echoed input.
 
 **Recommended fix**
 
-Keep this lightweight:
+Add a tiny recursive truncation helper used by `envelope()`:
 
 ```python
-state["last_cancelled_at"] = time.monotonic()
+def _truncate_value(value, max_len=200):
+    if isinstance(value, str):
+        return value if len(value) <= max_len else value[:max_len] + "..."
+    if isinstance(value, list):
+        return [_truncate_value(v, max_len) for v in value]
+    if isinstance(value, dict):
+        return {k: _truncate_value(v, max_len) for k, v in value.items()}
+    return value
 ```
 
-Before the next tool call, if the cancellation was within roughly 30 seconds,
-print a one-line warning. Do not block the user.
+Add one parser test that verifies nested long strings are capped.
+
+**Status**
+
+Partial.
 
 ---
 
-### P1.4 Truncation Should Surface the Actual Processed Topic
+### P1.6 Research Retry Budget and Concurrency Should Be Deliberate - Handled
 
-**Probe finding**
+**Previous status**
 
-Research topics longer than 50 characters are silently truncated. API returns:
+Earlier versions serialized all tool calls. That was safe but slow.
 
-- `truncated: true`
-- `original_topic_length`
-- `processed_topic`
+**Current handling**
 
-**Current problem**
+The current agent uses bounded concurrency and shared-budget pacing:
 
-The app preserves the fields, but prompt only says to mention that the topic was
-shortened. A better response should include the processed topic if present.
+- `weather.max_concurrent: 4`
+- `research.max_concurrent: 1`
+- shared `rate_limit_group: elyos_api`
+- `max_requests_per_window: 5`
+- `window_s: 30`
+- `rate_limit_safety_s: 2`
 
-**Required behavior**
+This is a better match for user expectations: independent calls can make
+progress concurrently, while shared-budget pacing and server-side retry protect
+against throttling.
 
-If truncated:
+**Status**
 
-```text
-The research API shortened your topic before processing it. It used:
-"<processed_topic>"
-```
+Handled.
 
-**Recommended fix**
+**Remaining test polish**
 
-Update prompt wording. No architecture change needed.
-
----
-
-### P1.5 Error Responses Should Be User-Friendly and Specific
-
-**Probe finding**
-
-Known error shapes:
-
-- 401: invalid or missing API key
-- 404: location not found, sometimes echoes long input
-- 405: method not allowed
-- 422: missing/wrong query parameter
-
-**Current problem**
-
-The app returns structured errors, but user-facing specificity depends on the
-LLM interpreting the error dict. Very long echoed user strings are truncated only
-for some keys.
-
-**Required behavior**
-
-- Normalize known errors into clear messages.
-- Truncate any long string nested inside error bodies before LLM context.
-- Avoid stack traces or raw FastAPI envelopes in user response.
-
-**Recommended fix**
-
-Add a small error-normalization helper or improve `envelope()` to recursively
-truncate strings. Keep the implementation short.
+Add one direct self-test proving `rate_limit_safety_s` extends the local pacing
+window.
 
 ---
 
-### P1.6 Research Retry Budget and Serialization Should Be Deliberate
-
-**Probe finding**
-
-Five concurrent research calls caused throttle exhaustion under a three-retry
-budget.
-
-**Current status**
-
-The app executes tool calls serially. This is a good practical mitigation.
+### P1.7 Do Not Auto-Refresh Research - Handled
 
 **Required behavior**
 
-- Keep serialized tool execution unless parallelism is explicitly required.
-- Keep retry budget at 5 or 6 for body-side throttles.
-- If later parallelism is introduced, add a queue or per-endpoint concurrency
-  cap.
-
-**Recommended fix**
-
-Document this choice in `DISCOVERIES.md` or a short code comment near the tool
-execution loop.
-
----
-
-### P1.7 Do Not Auto-Refresh Research
-
-**Probe finding**
-
-Repeated `/research` calls can burn budget and may produce new timestamps. There
-is no free cached reread for fresh topics.
-
-**Required behavior**
-
-- Do not silently call `/research` again to improve a generic answer.
+- Do not silently call `/research` again just to improve a generic answer.
 - If the result is too generic, ask the user for a narrower topic.
-- Optional: memoize exact topic results per session, but this is probably not
-  necessary for the take-home.
 
-**Current status**
+**Current handling**
 
-Mostly okay. The prompt should avoid promising deeper research unless the user
-asks for a narrower follow-up.
+The prompt treats generic summaries as valid tool output and asks the model not
+to fill gaps from its own knowledge.
+
+**Status**
+
+Handled.
 
 ---
 
-### P1.8 Tool Description Should Not Overstate `/research` — Handled
+### P1.8 Tool Description Should Not Overstate `/research` - Handled
 
-**Probe finding**
+**Current handling**
 
-The research API often returns a generic stub.
+`backend/chat/tools/schemas.py` describes research as a best-effort summary that
+may be generic, cached, truncated, or timeout.
 
-**Current status**
+**Status**
 
-This was previously a gap. It is now handled in `backend/chat/tools/schemas.py`.
-The tool description no longer promises in-depth research.
-
-**Required behavior**
-
-Use a more honest description:
-
-```text
-Look up a best-effort research summary. May return generic, cached, truncated,
-or timeout results.
-```
-
-**Recommended action**
-
-Keep this wording unless the underlying API becomes more capable.
+Handled.
 
 ---
 
 ## P2 Issues
 
-P2 issues improve clarity, demonstration quality, and maintainability.
+P2 issues improve maintainability, demonstration quality, and reviewer clarity.
 
-### P2.1 Add a `DISCOVERIES.md` Implementation Matrix
+### P2.1 Add or Update a `DISCOVERIES.md` Implementation Matrix - Pending
 
-**Current gap**
+The probe reports are strong, but a reviewer still has to manually connect them
+to runtime handling.
 
-The probe reports are strong, but a reviewer has to manually connect them to
-the chat app.
-
-**Recommended file**
-
-`DISCOVERIES.md`
-
-**Recommended structure**
+Recommended structure:
 
 ```text
 Finding | Evidence | Runtime handling | File/function | Demo query | Status
@@ -560,42 +511,43 @@ Finding | Evidence | Runtime handling | File/function | Demo query | Status
 
 Example rows:
 
-- HTTP 200 throttle envelope -> weather/research reports -> `call_api()`
+- HTTP-200 throttle envelope -> weather/research reports -> `_call_api()`
+- Shared rate bucket -> `shared_rate_limit_bucket_report.html` -> `_wait_for_budget()`
 - Weather dual schema -> weather report -> `normalise_weather()`
-- Mars -> Marseille mismatch -> weather report -> requested/returned fields
+- Mars -> Marseille mismatch -> requested/returned fields
 - Research `{}` timeout -> research report -> `parse_research()`
-- Cached/truncated research -> research report -> parser + prompt
-- Cancellation consumes budget -> cancellation reports -> CLI cancellation behavior
+- Cached/truncated research -> parser + prompt
+- Cancellation consumes budget -> session-state budget persistence
 
-This is likely the highest-value documentation improvement.
+**Status**
 
----
-
-### P2.2 Fix README Wording About Shared Throttle Bucket — Handled
-
-**Previous problem**
-
-README says `/weather` and `/research` share a sliding window. The probes showed
-the same HTTP-200 throttle envelope and sliding behavior, but shared bucket was
-not proven.
-
-**Current status**
-
-Handled. README now says both endpoints return body-side throttle envelopes and
-both showed sliding-window behavior, but whether they share one server-side
-bucket was not proven.
-
-**Correct wording**
-
-```text
-Both endpoints return throttle as HTTP 200 with a body-side
-retry_after_seconds. Both showed sliding-window behavior in probes. Whether
-they share one server-side bucket was not proven.
-```
+Pending.
 
 ---
 
-### P2.3 Add a Package Docstring to `backend/probes/__init__.py`
+### P2.2 README and CLI Help Should Match Test Package Rename - Pending
+
+The code now uses:
+
+- `backend/chat/tests/test_parsers.py`
+- `backend/chat/tests/test_resilience.py`
+- `backend/chat/tests/runner.py`
+
+Stale live references should be updated:
+
+- README architecture tree should no longer list `validate.py`.
+- README command comment should say parser and resilience self-tests.
+- `backend/chat/__main__.py` help should say parser and resilience self-tests.
+
+Historical case studies may keep old wording if intentionally historical.
+
+**Status**
+
+Pending.
+
+---
+
+### P2.3 Add a Package Docstring to `backend/probes/__init__.py` - Pending
 
 This file can stay functionally empty, but a docstring makes the package feel
 intentional:
@@ -604,71 +556,85 @@ intentional:
 """Probe scripts for Elyos API discovery."""
 ```
 
----
+**Status**
 
-### P2.4 Expand Validators for Probe-Derived Cases
-
-Current validators cover the core parser/envelope path. If expanded, add plain
-Python cases for:
-
-- cached research preserves `generated_at`
-- cached research does not hardcode year
-- truncation includes `processed_topic`
-- long echoed error strings are capped
-- unknown weather schema returns `unknown_schema`
-- envelope always marks `untrusted: true`
-
-Keep this as a focused sanity validator, not a full test suite.
+Pending.
 
 ---
 
-### P2.5 Preserve `generated_at` in the Research Model — Handled
+### P2.4 Expand Self-Tests for Probe-Derived Cases - Partially Handled
 
-This supports P1.1. It lets the LLM use actual API evidence for date/staleness
-claims.
+Current self-tests cover:
 
-**Current status**
+- weather shape A,
+- weather shape B,
+- weather mismatch,
+- fresh research,
+- cached research with `generated_at`,
+- no hardcoded `stale_warning`,
+- truncated research with `processed_topic`,
+- timeout research,
+- error passthrough,
+- untrusted envelope,
+- config rejection,
+- shared-budget pacing,
+- cross-turn budget persistence,
+- concurrent waiter serialization.
 
-Handled. `ResearchResult` includes:
+Recommended additions:
+
+- nested long error strings are recursively capped,
+- `rate_limit_safety_s` extends the pacing window,
+- unknown weather schema returns `unknown_schema`.
+
+**Status**
+
+Partial.
+
+---
+
+### P2.5 Preserve `generated_at` in the Research Model - Handled
+
+`ResearchResult` includes:
 
 ```python
 generated_at: str | None = None
 ```
 
+**Status**
+
+Handled.
+
 ---
 
-### P2.6 Use Topic-Neutral Prompt Examples
+### P2.6 Use Topic-Neutral Prompt Examples - Optional
 
-The current few-shot example uses `climate change`, while the test case used
-`solar energy`, so it is acceptable. Longer term, a synthetic topic avoids model
-priors even more.
+The current prompt example uses `climate change`. This is acceptable because the
+test case used `solar energy`, but a synthetic topic would reduce model-prior
+risk further.
 
-Example:
+**Status**
 
-```text
-example topic
-```
-
-This is polish, not a blocker.
+Optional polish.
 
 ---
 
 ## Recommended Implementation Order
 
-1. Make throttle wait visible in the terminal.
-2. Add a generic tool-error prompt rule.
-3. Track recent cancellation and warn on quick retry.
-4. Update truncation prompt wording to mention `processed_topic` when present.
-5. Add `DISCOVERIES.md` matrix.
-6. Optionally expand validators.
+1. Update live README and CLI help references to the new `tests/` package.
+2. Add a direct `rate_limit_safety_s` self-test.
+3. Add recursive envelope truncation for nested error bodies and one self-test.
+4. Add or update `DISCOVERIES.md` with probe-to-runtime traceability.
+5. Add a docstring to `backend/probes/__init__.py`.
+6. Optionally switch prompt examples to a synthetic topic.
 
 ---
 
 ## Acceptance Criteria
 
-The chat app can be considered fully aligned with the probe work when:
+The chat app can be considered aligned with the probe work when:
 
-- `python -m backend.chat --validate` passes.
+- `python -m backend.chat --validate` passes parser and resilience self-tests.
 - A generic research result produces a generic, grounded answer with no invented
   facts.
 - A cached research result says cached/may be outdated, and only mentions a date
@@ -677,8 +643,9 @@ The chat app can be considered fully aligned with the probe work when:
   processed topic.
 - `Mars` weather tells the user the API returned Marseille.
 - A throttle envelope causes a visible wait message and retry.
-- Ctrl+C cancels cleanly and a quick retry warns that the cancelled request may
-  still count against rate limits.
+- Ctrl+C cancels cleanly and the session-level rate budget survives the next
+  turn.
+- Shared weather/research rate-budget behavior is documented and enforced.
 - `DISCOVERIES.md` maps every major probe finding to runtime handling or an
   explicit out-of-scope decision.
 
@@ -686,17 +653,16 @@ The chat app can be considered fully aligned with the probe work when:
 
 ## Final Assessment
 
-The current app captures most P0 mechanics. It is close to acceptable as a
-take-home implementation.
+The current app now captures the important P0 and P1 runtime mechanics from the
+probe work. It is no longer fair to describe the probe findings as only
+partially reflected in the app in a major way.
 
-The remaining high-value work is not a large rewrite. It is a targeted
-hardening pass:
+The remaining work is targeted polish:
 
-- make throttling and cancellation visible,
-- keep API evidence fields as the source of truth,
-- add a generic tool-error prompt rule,
+- make documentation match the current refactor,
+- add two small self-tests,
+- recursively cap nested error strings,
 - document the discovery-to-implementation trail.
 
-That would make the final submission much stronger because it would show not
-only that the APIs were probed, but that the probe results directly shaped the
-agent runtime.
+That is a much better end state for the take-home: the probes did not just
+produce reports, they directly shaped the agent runtime.

@@ -14,6 +14,7 @@ elyos_api:
       rate_limit_group: "elyos_api"
       max_requests_per_window: 5
       window_s: 30
+      rate_limit_safety_s: 2
       max_throttle_retries: 5
       max_timeout_retries: 1
       retry_jitter_s: 0.5
@@ -24,6 +25,7 @@ elyos_api:
       rate_limit_group: "elyos_api"
       max_requests_per_window: 5
       window_s: 30
+      rate_limit_safety_s: 2
       max_throttle_retries: 5
       max_timeout_retries: 1
       retry_jitter_s: 1.0

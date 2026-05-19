@@ -1,3 +1,5 @@
+"""Response parsers and untrusted-data JSON envelope."""
+
 import json
 
 from pydantic import BaseModel
@@ -11,6 +13,7 @@ def _truncate(s: str, max_len: int = 200) -> str:
 
 
 def envelope(tool_name: str, payload: BaseModel | dict) -> str:
+    """Wrap a parsed tool result in an untrusted-data JSON envelope for the LLM."""
     data: dict = payload.model_dump(exclude_none=True) if isinstance(payload, BaseModel) else payload
     for key in ("topic", "summary", "message"):
         if key in data and isinstance(data[key], str):

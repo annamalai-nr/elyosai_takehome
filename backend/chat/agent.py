@@ -1,3 +1,5 @@
+"""ReAct agent loop with bounded concurrency and proactive budget pacing."""
+
 import asyncio
 import collections
 import logging
@@ -22,7 +24,7 @@ async def _wait_for_budget(state: dict, endpoint_cfg: dict) -> None:
     Approximate — reactive retry_after_seconds from the server remains
     the authoritative pacing signal."""
     group = endpoint_cfg["rate_limit_group"]
-    window = endpoint_cfg["window_s"]
+    window = endpoint_cfg["window_s"] + endpoint_cfg.get("rate_limit_safety_s", 0)
     max_req = endpoint_cfg["max_requests_per_window"]
 
     budgets = state.setdefault("rate_budgets", {})
@@ -75,6 +77,7 @@ async def stream_turn(
             state["partial"] = ""
             return
 
+        log.info("Round %d: executing %d tool call(s)", _round + 1, len(turn.tool_calls))
         sems: dict[str, asyncio.Semaphore] = {}
         ep_per_tc: list[str] = []
         for tc in turn.tool_calls:

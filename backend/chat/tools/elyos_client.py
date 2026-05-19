@@ -1,3 +1,5 @@
+"""Elyos API HTTP client with config-driven retry, jitter, and throttle handling."""
+
 import asyncio
 import logging
 import os
@@ -12,6 +14,7 @@ log = logging.getLogger(__name__)
 async def _call_api(
     client: httpx.AsyncClient, base_url: str, endpoint: str, params: dict, api_key: str, endpoint_cfg: dict,
 ) -> dict:
+    """Make a GET request with timeout retry, throttle retry, and jitter."""
     timeout = endpoint_cfg["timeout_s"]
     max_throttle = endpoint_cfg["max_throttle_retries"]
     max_timeout = endpoint_cfg["max_timeout_retries"]

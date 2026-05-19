@@ -1,3 +1,5 @@
+"""LiteLLM streaming adapter — streams one LLM turn and accumulates tool calls."""
+
 import logging
 from typing import Any
 
@@ -38,6 +40,8 @@ def _accumulate_tool_call(tool_calls: dict[int, dict], tc_delta: Any) -> None:
 
 async def stream_llm_turn(cfg: dict, messages: list[dict], state: dict) -> LLMTurn:
     """Stream one LLM completion, printing content and accumulating tool calls."""
+    model = cfg["llm"]["model_name"]
+    log.debug("Calling LLM: model=%s messages=%d", model, len(messages))
     stream = await litellm.acompletion(
         model=cfg["llm"]["model_name"],
         messages=messages,
@@ -64,7 +68,10 @@ async def stream_llm_turn(cfg: dict, messages: list[dict], state: dict) -> LLMTu
 
     content_text = "".join(content_parts)
 
-    if not raw_tool_calls:
+    if raw_tool_calls:
+        log.info("LLM requested %d tool call(s): %s", len(raw_tool_calls),
+                 ", ".join(tc["name"] for tc in raw_tool_calls.values()))
+    else:
         print()
 
     return LLMTurn(

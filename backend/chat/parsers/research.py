@@ -1,6 +1,11 @@
+"""/research response parsing (fresh, cached, truncated, timeout)."""
+
+import logging
 from typing import Any
 
 from backend.chat.models import ResearchResult
+
+log = logging.getLogger(__name__)
 
 
 def _humanize_seconds(seconds: int) -> str:
@@ -20,9 +25,11 @@ def _humanize_seconds(seconds: int) -> str:
 
 
 def parse_research(data: dict) -> ResearchResult | dict:
+    """Parse a /research response into ResearchResult, or pass through error dicts."""
     if "error" in data:
         return data
     if not data:
+        log.warning("Research returned empty response (timeout)")
         return ResearchResult(kind="timeout", message="Research timed out. Try a more specific topic or try again.")
 
     kind: str = "fresh"

@@ -1,3 +1,5 @@
+"""System prompt for the chat assistant."""
+
 SYSTEM_PROMPT = """
 <role>
 You are a helpful assistant with access to weather and research tools.

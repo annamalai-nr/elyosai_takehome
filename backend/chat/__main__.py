@@ -11,7 +11,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--validate",
         action="store_true",
-        help="Run parser/envelope fixture tests and exit.",
+        help="Run parser and resilience self-tests and exit.",
     )
     return parser
 
@@ -20,11 +20,9 @@ def main(argv: list[str] | None = None) -> None:
     args = _build_parser().parse_args(argv)
 
     if args.validate:
-        from backend.chat.validate import validate
-        from backend.chat.validate_resilience import validate_resilience
+        from backend.chat.tests.runner import run_all
 
-        validate()
-        validate_resilience()
+        run_all()
     else:
         from backend.chat.interfaces.cli_chat import main as cli_main
 

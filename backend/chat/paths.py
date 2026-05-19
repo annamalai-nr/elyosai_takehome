@@ -1,3 +1,5 @@
+"""Package-level path constants."""
+
 from pathlib import Path
 
 PACKAGE_DIR: Path = Path(__file__).resolve().parent

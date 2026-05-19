@@ -1,3 +1,5 @@
+"""Config loader — reads config.yaml, validates env vars, model, and endpoint fields."""
+
 import csv
 import logging
 import os
@@ -48,7 +50,8 @@ def load_config() -> dict[str, Any]:
 
     _validate_endpoints(cfg)
 
-    log.info("Config loaded: model=%s provider=%s", model, provider)
+    log.info("Config loaded: model=%s provider=%s endpoints=%s", model, provider,
+             list(cfg["elyos_api"]["endpoints"].keys()))
     return cfg
 
 
@@ -67,6 +70,7 @@ def _validate_endpoints(cfg: dict) -> None:
         ("window_s",                (int, float), 0),
         ("max_throttle_retries",    int,   0),
         ("max_timeout_retries",     int,   0),
+        ("rate_limit_safety_s",     (int, float), 0),
         ("retry_jitter_s",          (int, float), 0),
     ]
 

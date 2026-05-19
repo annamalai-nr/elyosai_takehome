@@ -1,3 +1,5 @@
+"""Pydantic models for LLM turns, weather, and research results."""
+
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field

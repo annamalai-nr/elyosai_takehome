@@ -37,11 +37,15 @@ Builds a CLI streaming chat application that calls two real-world APIs
 │   ├── weather_cancellation_report.html       /weather cancellation sidecar
 │   ├── research_probe_plan.html               /research pre-execution plan
 │   ├── research_probe_report.html             /research main probe (27 calls)
-│   └── research_cancellation_report.html      /research cancellation sidecar
+│   ├── research_cancellation_report.html      /research cancellation sidecar
+│   └── shared_rate_limit_bucket_report.html   proof that /weather + /research share one rate budget
 │
 ├── case_studies/                      trace-driven debugging write-ups
-│   ├── 2026-05-18-research-api-hallucination.md   root cause + diagnosis
-│   └── fix-round-*                    iterative fix attempts
+│   ├── 2026-05-18-research-api-hallucination.md       root cause + diagnosis
+│   ├── 2026-05-18-probe-findings-chat-app-coverage.md probe → runtime coverage audit
+│   ├── 2026-05-19-disciplined-resilience-harness-plan.md resilience policy + implementation plan
+│   ├── 2026-05-19-post-refactor-coverage-audit.md     post-harness coverage reconciliation
+│   └── fix-round-*                                    iterative hallucination fix attempts
 │
 ├── backend/
 │   ├── __init__.py
@@ -61,8 +65,11 @@ Builds a CLI streaming chat application that calls two real-world APIs
 │   │   │   ├── dispatch.py            tool execution dispatch
 │   │   │   └── elyos_client.py        raw Elyos HTTP/retry client
 │   │   ├── llm_client.py              LiteLLM streaming adapter
-│   │   ├── agent.py                   ReAct loop orchestration
-│   │   ├── validate.py                parser fixture tests (--validate)
+│   │   ├── agent.py                   ReAct loop + bounded concurrency + budget pacing
+│   │   ├── tests/                     self-tests (--validate)
+│   │   │   ├── runner.py              test runner entry point
+│   │   │   ├── test_parsers.py        9 parser/envelope behavioral tests
+│   │   │   └── test_resilience.py     7 config + budget + concurrency tests
 │   │   └── interfaces/
 │   │       └── cli_chat.py            interactive REPL + SIGINT handling
 │   ├── llm_utils/                     ported LiteLLM kwargs helpers
@@ -113,7 +120,7 @@ cd /Users/annamalainarayanan/Desktop/personal/interview_prep/elyosai
 ```bash
 conda activate elyosai
 python -m backend.chat              # interactive streaming chat
-python -m backend.chat --validate   # run 9 parser/envelope fixture tests
+python -m backend.chat --validate   # run 16 parser + resilience self-tests
 ```
 
 Config lives at `backend/chat/config.yaml`. Model name, API base URL, and
@@ -184,13 +191,20 @@ research probe ran.
 
 ## Case studies
 
-The `case_studies/` folder contains trace-driven debugging write-ups. The
-main one documents a research hallucination bug — the `/research` endpoint
-returns a generic template, and the LLM was expanding it with its own
-knowledge. The fix uses three established grounding techniques (grounding
-directive, refusal-as-valid-output, GOOD/BAD few-shot example) in the
-system prompt. See `2026-05-18-research-api-hallucination.md` for the
-root cause and `fix-round-*.md` for the iterative fix attempts.
+The `case_studies/` folder contains trace-driven debugging write-ups and
+coverage audits:
+
+- **Research hallucination** (`2026-05-18-research-api-hallucination.md` +
+  `fix-round-*.md`): `/research` returns a generic template, LLM expands with
+  its own knowledge. Fixed with grounding directive, refusal-as-valid-output,
+  and GOOD/BAD few-shot example.
+- **Probe-to-runtime coverage** (`2026-05-18-probe-findings-chat-app-coverage.md`):
+  Cross-references all probe findings against the chat app implementation.
+- **Resilience harness** (`2026-05-19-disciplined-resilience-harness-plan.md`):
+  Policy document for bounded concurrency, proactive budget pacing, timeout
+  retry, and config-driven resilience.
+- **Post-harness reconciliation** (`2026-05-19-post-refactor-coverage-audit.md`):
+  Final coverage audit after the resilience harness was implemented.
 
 ## Take-home phases
 
@@ -215,5 +229,7 @@ root cause and `fix-round-*.md` for the iterative fix attempts.
   already been found at `/` (the root endpoint).
 - **Mind the throttle.** Both `/weather` and `/research` return throttling as
   HTTP 200 with a `{"status":"throttled","retry_after_seconds":N,...}` body.
-  Both showed sliding-window behavior in probes, but whether they share one
-  server-side bucket was not proven. **Cancelled calls still consume a slot.**
+  A controlled probe confirmed they share a single server-side rate budget
+  (see `probe_reports/shared_rate_limit_bucket_report.html`). The chat app
+  uses a shared `rate_limit_group` with proactive budget pacing and bounded
+  concurrency to stay within limits. **Cancelled calls still consume a slot.**
