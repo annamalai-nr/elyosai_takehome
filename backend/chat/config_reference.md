@@ -17,7 +17,7 @@ rarely needs to throttle us.
 | `window_s` | number | `30` | The server's rate-limit sliding window in seconds. Also discovered empirically from probe `retry_after_seconds` values. |
 | `rate_limit_safety_s` | number | `2` | Added to `window_s` on the client side (effective window = 32s). Without it, 5 timestamps expire at exactly T=30 and we immediately fire 5 more, but the server's clock might disagree by 1-2 seconds, causing throttling. |
 
-**How they work together:** The proactive pacer in `agent._wait_for_budget()`
+**How they work together:** The proactive pacer in `tools.pacing.wait_for_budget()`
 tracks timestamps of recent calls in a per-group deque. When
 `len(deque) >= max_requests_per_window`, it sleeps until the oldest timestamp
 is older than `window_s + rate_limit_safety_s`. This keeps us just under the

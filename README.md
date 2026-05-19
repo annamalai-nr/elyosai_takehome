@@ -63,13 +63,15 @@ Builds a CLI streaming chat application that calls two real-world APIs
 │   │   ├── tools/                      tool schemas + execution + Elyos API
 │   │   │   ├── schemas.py             LLM tool schemas
 │   │   │   ├── dispatch.py            tool execution dispatch
+│   │   │   ├── pacing.py              proactive rate-limit pacing + bounded execution
 │   │   │   └── elyos_client.py        raw Elyos HTTP/retry client
 │   │   ├── llm_client.py              LiteLLM streaming adapter
 │   │   ├── agent.py                   ReAct loop + bounded concurrency + budget pacing
 │   │   ├── tests/                     self-tests (--validate)
 │   │   │   ├── runner.py              test runner entry point
+│   │   │   ├── test_history.py         7 history trimming tests
 │   │   │   ├── test_parsers.py        9 parser/envelope behavioral tests
-│   │   │   └── test_resilience.py     7 config + budget + concurrency tests
+│   │   │   └── test_resilience.py     4 budget + concurrency tests
 │   │   └── interfaces/
 │   │       └── cli_chat.py            interactive REPL + SIGINT handling
 │   ├── llm_utils/                     ported LiteLLM kwargs helpers
@@ -120,7 +122,7 @@ cd /Users/annamalainarayanan/Desktop/personal/interview_prep/elyosai
 ```bash
 conda activate elyosai
 python -m backend.chat              # interactive streaming chat
-python -m backend.chat --validate   # run 16 parser + resilience self-tests
+python -m backend.chat --validate   # run 20 parser + resilience + history self-tests
 ```
 
 Config lives at `backend/chat/config.yaml`. Model name, API base URL, and

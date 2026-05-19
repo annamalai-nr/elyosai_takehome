@@ -512,7 +512,7 @@ Finding | Evidence | Runtime handling | File/function | Demo query | Status
 Example rows:
 
 - HTTP-200 throttle envelope -> weather/research reports -> `_call_api()`
-- Shared rate bucket -> `shared_rate_limit_bucket_report.html` -> `_wait_for_budget()`
+- Shared rate bucket -> `shared_rate_limit_bucket_report.html` -> `tools/pacing.py:wait_for_budget()`
 - Weather dual schema -> weather report -> `normalise_weather()`
 - Mars -> Marseille mismatch -> requested/returned fields
 - Research `{}` timeout -> research report -> `parse_research()`

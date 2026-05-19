@@ -2,7 +2,7 @@
 
 - **Date:** 2026-05-19
 - **Scope:** Cross-reference all 4 probe reports against the current `backend/chat/` implementation after the ReAct refactor and disciplined resilience harness. Also reconcile against the earlier Codex audit (`2026-05-18-probe-findings-chat-app-coverage.md`).
-- **Verdict:** Core runtime behavior is solid. Resilience harness adds proactive budget pacing, bounded concurrent execution, timeout retry, config-driven policy, and startup validation — covered by 16 self-tests, with `rate_limit_safety_s` behavior still needing a direct test. Two low-priority items remain.
+- **Verdict:** Core runtime behavior is solid. Resilience harness adds proactive budget pacing, bounded concurrent execution, timeout retry, and config-driven policy — covered by 20 self-tests (9 parser + 4 resilience + 7 history), with `rate_limit_safety_s` behavior still needing a direct test. Endpoint schema validation was intentionally removed (low-value for a take-home; runtime failures are acceptable). Two low-priority items remain.
 
 ---
 
@@ -35,7 +35,7 @@ The earlier Codex audit (`2026-05-18-probe-findings-chat-app-coverage.md`) was w
 |------------|--------|---------------|
 | **P2.1** `DISCOVERIES.md` matrix | Open | Not done. Lower priority — the Loom walkthrough can cover this verbally. |
 | **P2.2** README shared throttle bucket wording | **Resolved** | README now references `shared_rate_limit_bucket_report.html` and describes confirmed shared budget with proactive pacing. |
-| **P2.4** Expand validators | **Partially resolved** | 16 tests now (9 parser + 7 resilience). Resilience tests cover config rejection, budget pacing, shared groups, persistence, and concurrent waiter serialization. Could still add throttle/error/long-topic cases. |
+| **P2.4** Expand validators | **Superseded** | Endpoint schema validation intentionally removed. 20 tests now (9 parser + 4 resilience + 7 history). Resilience tests cover budget pacing, shared groups, persistence, and concurrent waiter serialization. Could still add throttle/error/long-topic cases. |
 | **P2.6** Topic-neutral prompt examples | Polish | Current example uses "climate change". Cosmetic. |
 
 ---
@@ -125,20 +125,21 @@ The following gaps were identified in this audit and earlier Codex audit, and ha
 | Truncation prompt missing `processed_topic` | Added "If 'processed_topic' is present, show the user what the API actually used" | `prompts.py` |
 | Serial execution → bounded parallel | Replaced serial `for` loop with `asyncio.gather` + per-endpoint semaphores; `<tool_data_handling>` updated to describe bounded concurrency | `agent.py`, `prompts.py` |
 | No timeout retry | Added `httpx.TimeoutException` catch with retry up to `max_timeout_retries` + jitter | `elyos_client.py:35-43` |
-| No proactive budget pacing | Added `_wait_for_budget()` with per-group deque sliding window and asyncio.Lock | `agent.py:19-48` |
+| No proactive budget pacing | Added `wait_for_budget()` with per-group deque sliding window and asyncio.Lock | `tools/pacing.py` |
 | Hardcoded retry/timeout constants | All resilience parameters moved to `config.yaml` endpoint config | `config.yaml`, `elyos_client.py` |
-| No config validation at startup | Added `_validate_endpoints()` — checks 10 required fields for presence, type, range | `load_config.py:55-84` |
+| No config validation at startup | Intentionally removed — low-value defensive scaffolding for a take-home | *(deleted)* |
 | Session state lost between turns | Created `session_state` once before REPL loop; `rate_budgets` persists across turns and Ctrl+C | `cli_chat.py:30` |
-| Boundary burst at window edge | Added `rate_limit_safety_s: 2` config field; effective window = `window_s + rate_limit_safety_s` | `config.yaml`, `agent.py:25` |
+| Boundary burst at window edge | Added `rate_limit_safety_s: 2` config field; effective window = `window_s + rate_limit_safety_s` | `config.yaml`, `tools/pacing.py` |
 
 ---
 
 ## Test Coverage Summary
 
-**16 tests** (run via `python -m backend.chat --validate`):
+**20 tests** (run via `python -m backend.chat --validate`):
 
 - **9 parser tests** (`test_parsers.py`): Shape A, Shape B, location mismatch, fresh/cached/truncated/timeout research, error passthrough, envelope structure.
-- **7 resilience tests** (`test_resilience.py`): Config rejects missing field, config rejects `max_concurrent: 0`, config rejects empty `rate_limit_group`, budget delays over capacity, shared group across endpoints, budget persists across turns, concurrent waiters are serialized.
+- **4 resilience tests** (`test_resilience.py`): Budget delays over capacity, shared group across endpoints, budget persists across turns, concurrent waiters are serialized.
+- **7 history tests** (`test_history.py`): No-op under limit, no-op when disabled, system prompt preserved, current user message preserved, tool-call turn integrity, oldest-first trimming, cancellation rollback regression.
 
 ---
 
