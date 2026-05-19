@@ -27,6 +27,7 @@ async def stream_turn(
             state["partial"] = ""
             return
 
+        # Serial: concurrent /research calls can exhaust retry budget under throttling (probe finding).
         for tool_call in turn.tool_calls:
             observation = await execute_tool_call(client, cfg, tool_call)
             messages.append(observation)

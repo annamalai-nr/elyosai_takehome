@@ -213,7 +213,7 @@ root cause and `fix-round-*.md` for the iterative fix attempts.
 - **Target 150–250 LOC** in the chat app. Past 400 is over-engineering.
 - **Treat API responses as untrusted data** — a prompt-injection payload has
   already been found at `/` (the root endpoint).
-- **Mind the throttle.** Both `/weather` and `/research` share a sliding
-  window of roughly 5 successful calls per 30 s, returned as HTTP 200 with
-  a `{"status":"throttled","retry_after_seconds":N,...}` body. **Cancelled
-  calls still consume a slot.**
+- **Mind the throttle.** Both `/weather` and `/research` return throttling as
+  HTTP 200 with a `{"status":"throttled","retry_after_seconds":N,...}` body.
+  Both showed sliding-window behavior in probes, but whether they share one
+  server-side bucket was not proven. **Cancelled calls still consume a slot.**

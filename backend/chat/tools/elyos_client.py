@@ -49,6 +49,7 @@ async def _call_api(
             log.warning("Throttle retries exhausted on %s", endpoint)
             return {"error": "throttle_exhausted", "message": "Rate limit retries exhausted"}
         log.warning("Throttled on %s, retrying in %ds (attempt %d/%d)", endpoint, wait, attempt + 1, MAX_THROTTLE_RETRIES)
+        print(f"\r  Rate-limited, retrying in {wait}s...", flush=True)
         await asyncio.sleep(wait)
 
     return {"error": "throttle_exhausted", "message": "Rate limit retries exhausted"}

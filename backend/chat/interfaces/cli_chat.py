@@ -54,7 +54,7 @@ async def _async_main() -> None:
             try:
                 await _turn_task
             except asyncio.CancelledError:
-                print("\nCancelled.")
+                print("\nCancelled. The interrupted API call may still count against the rate limit.")
                 del messages[turn_start:]
                 if state["partial"]:
                     messages.append({"role": "user", "content": user_input})

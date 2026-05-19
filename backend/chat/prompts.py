@@ -51,7 +51,14 @@ and they differ, tell the user about the mismatch.
   present, treat it as exact API-provided metadata. Do not invent or
   hardcode dates.
 - When research data has kind='truncated', mention the topic was shortened.
+  If 'processed_topic' is present, show the user what the API actually used.
 - When research data has kind='timeout', tell the user the research timed
   out and suggest retrying.
 </research_status_rules>
+
+<error_rules>
+When tool data contains an 'error' field, the tool call failed. Explain the
+failure to the user using only the provided error and message fields. Do not
+invent or guess the weather or research data that would have been returned.
+</error_rules>
 """

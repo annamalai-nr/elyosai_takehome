@@ -18,10 +18,11 @@ The chat app captures many of the major runtime mechanics, but it does not yet
 fully capture the operational lessons from the probes. The most important gaps
 are:
 
-1. cached research messaging is too hardcoded,
-2. throttle and cancellation UX is too quiet,
-3. cancellation-budget behavior is not tracked,
-4. probe findings are not traceably mapped to runtime handling.
+1. throttle and cancellation UX is too quiet,
+2. cancellation-budget behavior is not surfaced to the user,
+3. generic tool errors lack an explicit prompt rule,
+4. truncation responses could be more specific,
+5. probe findings are not traceably mapped to runtime handling.
 
 The app is not fundamentally broken. The next work should be a focused hardening
 pass, not a broad refactor.
@@ -46,12 +47,14 @@ Generated probe reports:
 
 Current chat-app implementation areas:
 
-- `backend/chat/core/engine.py`
-- `backend/chat/core/parsers.py`
-- `backend/chat/core/models.py`
+- `backend/chat/agent.py`
+- `backend/chat/llm_client.py`
+- `backend/chat/models.py`
+- `backend/chat/parsers/`
+- `backend/chat/tools/`
 - `backend/chat/prompts.py`
 - `backend/chat/interfaces/cli_chat.py`
-- `backend/chat/interfaces/validate.py`
+- `backend/chat/validate.py`
 
 ---
 
@@ -81,7 +84,7 @@ handling.
 | Weather fuzzy match, e.g. Mars -> Marseille | Parser preserves `requested_location` and `returned_location`; prompt tells model to surface mismatch | Good |
 | HTTP 200 throttle envelope | `call_api()` inspects 200 bodies and retries on `status="throttled"` | Good core handling; weak UX |
 | `/research` empty `{}` after ~15s | `parse_research()` maps empty dict to timeout result | Good |
-| `/research` cached schema | `parse_research()` maps cached payload to `kind="cached"` | Partially good; messaging too hardcoded |
+| `/research` cached schema | `parse_research()` maps cached payload to `kind="cached"` and preserves API-provided freshness fields | Good |
 | `/research` truncated schema | `parse_research()` preserves `processed_topic` and `original_topic_length` | Good core handling; response detail could improve |
 | Prompt-injection / echoed adversarial text | Tool output envelope marks data as untrusted; long fields capped | Good |
 | Research API returns generic stubs | Prompt now tells LLM to use only `summary` and `sources` | Good after case-study fix |
@@ -311,25 +314,21 @@ Keep `MAX_TOOL_ROUNDS`.
 P1 issues do not make the app unusable, but they prevent it from fully honoring
 the probe findings or create misleading user behavior.
 
-### P1.1 Cached Research Messaging Is Too Hardcoded
+### P1.1 Cached Research Messaging Must Stay Evidence-Based — Handled
 
 **Probe finding**
 
 Cached research payloads can include `cached`, `cache_age_seconds`,
 `generated_at`, and sometimes date language inside `summary`.
 
-**Current problem**
+**Current status**
 
-The app currently injects a hardcoded stale warning:
+This was previously a gap. It is now handled.
 
-```text
-This data is from early 2024 and may not reflect recent developments.
-```
-
-The prompt also tells the LLM to say cached data is from 2024.
-
-That is too strong. The runtime should use the actual API result to support
-date claims.
+The current parser preserves `generated_at` and `cache_age_seconds`, computes a
+human-readable `cache_age`, and no longer injects a hardcoded stale warning.
+The validator also guards that `stale_warning` is absent from the envelope.
+The prompt tells the LLM to use API evidence only and not hardcode dates.
 
 **Required behavior**
 
@@ -339,22 +338,9 @@ date claims.
 - Mention a year or date only if the tool payload contains that evidence.
 - Do not hardcode `2024` in parser or prompt.
 
-**Recommended fix**
+**Recommended action**
 
-Update the research model and parser to include `generated_at`. Replace
-hardcoded stale warning with neutral wording:
-
-```text
-This is a cached research result and may be outdated.
-```
-
-Update prompt:
-
-```text
-When research data has kind='cached', mention that it is cached and may be
-outdated. If generated_at, cache_age_seconds, or date language is present in the
-tool result, use that evidence. Do not invent or hardcode dates.
-```
+Keep the current evidence-based behavior and validator guard.
 
 ---
 
@@ -525,34 +511,29 @@ asks for a narrower follow-up.
 
 ---
 
-### P1.8 Tool Description Should Not Overstate `/research`
+### P1.8 Tool Description Should Not Overstate `/research` — Handled
 
 **Probe finding**
 
 The research API often returns a generic stub.
 
-**Current problem**
+**Current status**
 
-Tool description says:
-
-```text
-Research a topic in depth.
-```
-
-That misrepresents the tool and can nudge the model toward over-answering.
+This was previously a gap. It is now handled in `backend/chat/tools/schemas.py`.
+The tool description no longer promises in-depth research.
 
 **Required behavior**
 
 Use a more honest description:
 
 ```text
-Look up a research summary for a topic. Slow response; may return generic,
-cached, truncated, or timeout results.
+Look up a best-effort research summary. May return generic, cached, truncated,
+or timeout results.
 ```
 
-**Recommended fix**
+**Recommended action**
 
-Update `TOOLS` description in `prompts.py`.
+Keep this wording unless the underlying API becomes more capable.
 
 ---
 
@@ -590,15 +571,21 @@ This is likely the highest-value documentation improvement.
 
 ---
 
-### P2.2 Fix README Wording About Shared Throttle Bucket
+### P2.2 Fix README Wording About Shared Throttle Bucket — Handled
 
-**Current problem**
+**Previous problem**
 
 README says `/weather` and `/research` share a sliding window. The probes showed
 the same HTTP-200 throttle envelope and sliding behavior, but shared bucket was
 not proven.
 
-**Recommended wording**
+**Current status**
+
+Handled. README now says both endpoints return body-side throttle envelopes and
+both showed sliding-window behavior, but whether they share one server-side
+bucket was not proven.
+
+**Correct wording**
 
 ```text
 Both endpoints return throttle as HTTP 200 with a body-side
@@ -635,12 +622,14 @@ Keep this as a focused sanity validator, not a full test suite.
 
 ---
 
-### P2.5 Preserve `generated_at` in the Research Model
+### P2.5 Preserve `generated_at` in the Research Model — Handled
 
 This supports P1.1. It lets the LLM use actual API evidence for date/staleness
 claims.
 
-Recommended model field:
+**Current status**
+
+Handled. `ResearchResult` includes:
 
 ```python
 generated_at: str | None = None
@@ -666,15 +655,12 @@ This is polish, not a blocker.
 
 ## Recommended Implementation Order
 
-1. Remove hardcoded cached-year behavior.
-2. Preserve `generated_at` from `/research`.
-3. Update cached prompt rule to use only evidence in the tool result.
-4. Make throttle wait visible in the terminal.
-5. Track recent cancellation and warn on quick retry.
-6. Improve `research_topic` tool description.
-7. Add `DISCOVERIES.md` matrix.
-8. Fix README wording about shared throttle bucket.
-9. Optionally expand validators.
+1. Make throttle wait visible in the terminal.
+2. Add a generic tool-error prompt rule.
+3. Track recent cancellation and warn on quick retry.
+4. Update truncation prompt wording to mention `processed_topic` when present.
+5. Add `DISCOVERIES.md` matrix.
+6. Optionally expand validators.
 
 ---
 
@@ -706,9 +692,9 @@ take-home implementation.
 The remaining high-value work is not a large rewrite. It is a targeted
 hardening pass:
 
-- remove hardcoded stale-year assumptions,
 - make throttling and cancellation visible,
-- preserve API evidence fields,
+- keep API evidence fields as the source of truth,
+- add a generic tool-error prompt rule,
 - document the discovery-to-implementation trail.
 
 That would make the final submission much stronger because it would show not
