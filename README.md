@@ -58,7 +58,7 @@ Builds a CLI streaming chat application that calls two real-world APIs
 │   │   ├── prompts.py                 system prompt
 │   │   ├── tools/                      tool schemas + execution + Elyos API
 │   │   │   ├── schemas.py             LLM tool schemas
-│   │   │   ├── runtime.py             tool execution dispatch
+│   │   │   ├── dispatch.py            tool execution dispatch
 │   │   │   └── elyos_client.py        raw Elyos HTTP/retry client
 │   │   ├── llm_client.py              LiteLLM streaming adapter
 │   │   ├── agent.py                   ReAct loop orchestration

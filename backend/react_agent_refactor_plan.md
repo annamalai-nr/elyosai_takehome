@@ -90,7 +90,7 @@ Do not move or rewrite these unless an import path must be updated:
 
 - `backend/chat/tools/`
   - Keep `TOOLS` in `tools/schemas.py`.
-  - Keep tool execution dispatch in `tools/runtime.py`.
+  - Keep tool execution dispatch in `tools/dispatch.py`.
   - Keep raw Elyos HTTP client in `tools/elyos_client.py`.
   - `tools/__init__.py` re-exports `TOOLS` and `execute_tool_call`.
   - Keep the improved `research_topic` tool description:
@@ -216,13 +216,13 @@ async def stream_llm_turn(cfg: dict, messages: list[dict], state: dict) -> LLMTu
 
 `agent.py` should not need to know how streamed tool-call deltas are assembled.
 
-### 3. Split `backend/chat/tools/` into schemas, runtime, and client
+### 3. Split `backend/chat/tools/` into schemas, dispatch, and client
 
 The `tools/` package has three modules:
 
 - `tools/schemas.py`: LLM tool JSON schemas only (`TOOLS`). No runtime imports.
 - `tools/elyos_client.py`: raw Elyos HTTP client (`call_api`), throttle retry, timeout handling. No knowledge of tool-call protocol or parsers.
-- `tools/runtime.py`: tool execution dispatch (`execute_tool_call`). Parses tool-call arguments, calls `elyos_client.call_api`, normalizes with parsers, wraps in envelope, returns `{"role": "tool", ...}` messages.
+- `tools/dispatch.py`: tool execution dispatch (`execute_tool_call`). Parses tool-call arguments, calls `elyos_client.call_api`, normalizes with parsers, wraps in envelope, returns `{"role": "tool", ...}` messages.
 - `tools/__init__.py`: re-exports `TOOLS` and `execute_tool_call`.
 
 Recommended output shape from tool execution:
@@ -242,7 +242,7 @@ This keeps `agent.py` free from tool-specific details.
 Keep these tracing decorators:
 
 ```python
-@traceable(run_type="tool", name="execute_tool")      # runtime.py
+@traceable(run_type="tool", name="execute_tool")      # dispatch.py
 @traceable(run_type="tool", name="elyos_api_call")    # elyos_client.py
 ```
 
