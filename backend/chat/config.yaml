@@ -10,10 +10,14 @@ elyos_api:
     weather:
       path: "/weather"
       timeout_s: 15
+      # Set below max_requests_per_window (4 < 5) so not all budget slots
+      # are consumed in one burst — leaves headroom for smoother pacing.
       max_concurrent: 4
       rate_limit_group: "elyos_api"
       max_requests_per_window: 5
       window_s: 30
+      # Adds 2s to the client-side window (effective 32s) to prevent
+      # boundary-burst throttling when timestamps expire near the edge.
       rate_limit_safety_s: 2
       max_throttle_retries: 5
       max_timeout_retries: 1
@@ -21,6 +25,8 @@ elyos_api:
     research:
       path: "/research"
       timeout_s: 20
+      # Only 1: research calls are slow (3-8s) and share the same rate
+      # budget — parallel research would exhaust the budget quickly.
       max_concurrent: 1
       rate_limit_group: "elyos_api"
       max_requests_per_window: 5
