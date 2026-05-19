@@ -2,7 +2,7 @@
 
 - **Date:** 2026-05-19
 - **Scope:** Cross-reference all 4 probe reports against the current `backend/chat/` implementation after the ReAct refactor and disciplined resilience harness. Also reconcile against the earlier Codex audit (`2026-05-18-probe-findings-chat-app-coverage.md`).
-- **Verdict:** Core runtime behavior is solid. Resilience harness adds proactive budget pacing, bounded concurrent execution, timeout retry, and config-driven policy — covered by 20 self-tests (9 parser + 4 resilience + 7 history), with `rate_limit_safety_s` behavior still needing a direct test. Endpoint schema validation was intentionally removed (low-value for a take-home; runtime failures are acceptable). Two low-priority items remain.
+- **Verdict:** Core runtime behavior is solid. Resilience harness adds proactive budget pacing, bounded concurrent execution, timeout retry, and config-driven policy — covered by 20 self-tests (9 parser + 4 resilience + 7 history). Config was simplified: rate-limit fields lifted to one API-level `rate_limit` block, `rate_limit_safety_s` and `retry_jitter_s` removed (server's `retry_after_seconds` is authoritative; single-user CLI has no thundering herd). Endpoint schema validation was intentionally removed. Two low-priority items remain.
 
 ---
 
@@ -47,11 +47,11 @@ The earlier Codex audit (`2026-05-18-probe-findings-chat-app-coverage.md`) was w
 | # | Finding | Where |
 |---|---------|-------|
 | 1 | Throttle envelope detection (HTTP 200 body-side `status:"throttled"`) | `elyos_client.py _call_api()` checks `data.get("status") == "throttled"` on every 200 response |
-| 2 | `retry_after_seconds` backoff with jitter | Sleeps `retry_after_seconds + 1 + random.uniform(0, jitter)` before retry |
-| 3 | Bounded throttle retry count (config-driven) | `endpoint_cfg["max_throttle_retries"]` in `config.yaml` — no hardcoded constant |
+| 2 | `retry_after_seconds` backoff | Sleeps `retry_after_seconds + 1` before retry |
+| 3 | Bounded throttle retry count (config-driven) | `elyos_api.rate_limit.max_throttle_retries` in `config.yaml` — no hardcoded constant |
 | 4 | Throttle exhaustion returns structured error | Returns `{"error": "throttle_exhausted", ...}` |
 | 5 | Error paths bypass throttle (401/404/405/422 return immediately) | `_call_api()` returns on non-200 without retry |
-| 6 | Timeout retry with jitter | `httpx.TimeoutException` caught, retried up to `max_timeout_retries` with `random.uniform(0, jitter)` sleep. Returns `{"error": "request_timeout", ...}` on exhaustion |
+| 6 | Timeout retry with fixed 1s delay | `httpx.TimeoutException` caught, retried up to `max_timeout_retries` with 1s sleep. Returns `{"error": "request_timeout", ...}` on exhaustion |
 
 ### Weather parsing (6)
 
@@ -102,13 +102,13 @@ The earlier Codex audit (`2026-05-18-probe-findings-chat-app-coverage.md`) was w
 | # | Finding | Where |
 |---|---------|-------|
 | 31 | Bounded concurrent execution (weather: 4, research: 1) | `asyncio.Semaphore` per endpoint in `agent.py`, fan-out via `asyncio.gather` |
-| 32 | Proactive budget pacing (shared sliding window) | `_wait_for_budget()` in `agent.py`: per-group `collections.deque` of timestamps, sleeps when window is full |
-| 33 | Shared rate-limit group across endpoints | Both endpoints use `rate_limit_group: "elyos_api"` — share one deque and one budget |
-| 34 | Boundary-burst prevention (`rate_limit_safety_s`) | Effective window = `window_s + rate_limit_safety_s` (32s vs 30s), prevents premature burst at window edge |
-| 35 | Concurrency-safe budget checking | Per-group `asyncio.Lock` in `_wait_for_budget()` — lock held only for check/append, released before sleep |
+| 32 | Proactive budget pacing (shared sliding window) | `wait_for_budget()` in `tools/pacing.py`: `collections.deque` of timestamps, sleeps when window is full |
+| 33 | Shared API-level rate budget | One `rate_limit` block in `config.yaml` — both endpoints draw from the same pool |
+| 34 | *(Removed)* Boundary-burst prevention | `rate_limit_safety_s` removed — server's `retry_after_seconds` is authoritative |
+| 35 | Concurrency-safe budget checking | `asyncio.Lock` in `wait_for_budget()` — lock held only for check/append, released before sleep |
 | 36 | Session state persists across turns and cancellation | `session_state` dict created once in `cli_chat.py`; `rate_budgets` and `rate_budget_locks` survive Ctrl+C rollback |
-| 37 | Config-driven resilience policy (10 fields per endpoint) | All retry counts, timeouts, jitter, concurrency, budget params in `config.yaml` — zero hardcoded constants |
-| 38 | Config startup validation | `_validate_endpoints()` in `load_config.py` checks presence, type, and range for all 10 required fields |
+| 37 | Config-driven resilience policy | Rate-limit config at API level, per-endpoint: `path`, `timeout_s`, `max_concurrent`, optional `max_timeout_retries` |
+| 38 | *(Removed)* Config startup validation | Intentionally removed — low-value for a take-home |
 | 39 | No prompt injection in tool endpoints (envelope applied as defense-in-depth) | All 70 probe response bodies clean; envelope still applied |
 
 ---
@@ -124,12 +124,12 @@ The following gaps were identified in this audit and earlier Codex audit, and ha
 | No prompt rule for tool errors | Added `<error_rules>` section — LLM told to use only error/message fields, not hallucinate | `prompts.py` |
 | Truncation prompt missing `processed_topic` | Added "If 'processed_topic' is present, show the user what the API actually used" | `prompts.py` |
 | Serial execution → bounded parallel | Replaced serial `for` loop with `asyncio.gather` + per-endpoint semaphores; `<tool_data_handling>` updated to describe bounded concurrency | `agent.py`, `prompts.py` |
-| No timeout retry | Added `httpx.TimeoutException` catch with retry up to `max_timeout_retries` + jitter | `elyos_client.py:35-43` |
-| No proactive budget pacing | Added `wait_for_budget()` with per-group deque sliding window and asyncio.Lock | `tools/pacing.py` |
-| Hardcoded retry/timeout constants | All resilience parameters moved to `config.yaml` endpoint config | `config.yaml`, `elyos_client.py` |
+| No timeout retry | Added `httpx.TimeoutException` catch with retry up to `max_timeout_retries` | `elyos_client.py` |
+| No proactive budget pacing | Added `wait_for_budget()` with shared deque sliding window and asyncio.Lock | `tools/pacing.py` |
+| Hardcoded retry/timeout constants | Resilience parameters in `config.yaml` — API-level rate limit + per-endpoint timeouts | `config.yaml`, `elyos_client.py` |
 | No config validation at startup | Intentionally removed — low-value defensive scaffolding for a take-home | *(deleted)* |
-| Session state lost between turns | Created `session_state` once before REPL loop; `rate_budgets` persists across turns and Ctrl+C | `cli_chat.py:30` |
-| Boundary burst at window edge | Added `rate_limit_safety_s: 2` config field; effective window = `window_s + rate_limit_safety_s` | `config.yaml`, `tools/pacing.py` |
+| Session state lost between turns | Created `session_state` once before REPL loop; `rate_budgets` persists across turns and Ctrl+C | `cli_chat.py` |
+| Boundary burst at window edge | Removed `rate_limit_safety_s` — server's `retry_after_seconds` is authoritative | *(simplified away)* |
 
 ---
 

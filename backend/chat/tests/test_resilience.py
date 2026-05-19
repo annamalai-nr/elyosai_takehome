@@ -11,13 +11,13 @@ def test_budget_delays_over_capacity():
     """Shared budget pacing delays the N+1th request."""
 
     state: dict = {}
-    ep_cfg = {"rate_limit_group": "test_delay", "max_requests_per_window": 2, "window_s": 0.3}
+    rate_cfg = {"max_requests_per_window": 2, "window_s": 0.3}
 
     async def _run():
-        await wait_for_budget(state, ep_cfg)
-        await wait_for_budget(state, ep_cfg)
+        await wait_for_budget(state, rate_cfg)
+        await wait_for_budget(state, rate_cfg)
         t0 = time.monotonic()
-        await wait_for_budget(state, ep_cfg)
+        await wait_for_budget(state, rate_cfg)
         elapsed = time.monotonic() - t0
         return elapsed
 
@@ -28,17 +28,16 @@ def test_budget_delays_over_capacity():
 
 
 def test_shared_group_across_endpoints():
-    """Weather and research sharing rate_limit_group consume the same budget."""
+    """Weather and research draw from the same API-level budget."""
 
     state: dict = {}
-    shared_cfg = {"rate_limit_group": "test_shared", "max_requests_per_window": 2, "window_s": 0.3}
+    rate_cfg = {"max_requests_per_window": 2, "window_s": 0.3}
 
     async def _run():
-        await wait_for_budget(state, shared_cfg)
-        await wait_for_budget(state, shared_cfg)
+        await wait_for_budget(state, rate_cfg)
+        await wait_for_budget(state, rate_cfg)
         t0 = time.monotonic()
-        # Third call uses the same group, simulating a different endpoint sharing the budget
-        await wait_for_budget(state, shared_cfg)
+        await wait_for_budget(state, rate_cfg)
         elapsed = time.monotonic() - t0
         return elapsed
 
@@ -52,15 +51,15 @@ def test_budget_persists_across_turns():
     """Rate budget state persists when the same state object is reused."""
 
     state: dict = {}
-    ep_cfg = {"rate_limit_group": "test_persist", "max_requests_per_window": 2, "window_s": 0.3}
+    rate_cfg = {"max_requests_per_window": 2, "window_s": 0.3}
 
     async def _turn1():
-        await wait_for_budget(state, ep_cfg)
-        await wait_for_budget(state, ep_cfg)
+        await wait_for_budget(state, rate_cfg)
+        await wait_for_budget(state, rate_cfg)
 
     async def _turn2():
         t0 = time.monotonic()
-        await wait_for_budget(state, ep_cfg)
+        await wait_for_budget(state, rate_cfg)
         return time.monotonic() - t0
 
     asyncio.run(_turn1())
@@ -71,16 +70,16 @@ def test_budget_persists_across_turns():
 
 
 def test_concurrent_waiters_are_serialized():
-    """Concurrent waiters are serialized by the per-group lock."""
+    """Concurrent waiters are serialized by the lock."""
 
     state: dict = {}
-    ep_cfg = {"rate_limit_group": "test_conc", "max_requests_per_window": 1, "window_s": 0.2}
+    rate_cfg = {"max_requests_per_window": 1, "window_s": 0.2}
 
     async def _run():
         start_times = []
 
         async def _acquire():
-            await wait_for_budget(state, ep_cfg)
+            await wait_for_budget(state, rate_cfg)
             start_times.append(time.monotonic())
 
         await asyncio.gather(_acquire(), _acquire(), _acquire())

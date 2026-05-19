@@ -45,7 +45,7 @@ async def stream_turn(
                 sems[ep] = asyncio.Semaphore(endpoints[ep]["max_concurrent"])
 
         observations = await asyncio.gather(*[
-            bounded_execute(sems[ep], client, cfg, state, endpoints[ep], tc)
+            bounded_execute(sems[ep], client, cfg, state, tc)
             for ep, tc in pairs
         ])
         messages.extend(observations)

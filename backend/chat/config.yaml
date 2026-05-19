@@ -4,37 +4,22 @@
 elyos_api:
   base_url: "https://elyos-interview-907656039105.europe-west2.run.app"
   api_key_env: "ELYOS_API_KEY"   # name of the env var that holds the key
-  # Per the take-home PDF: only /weather and /research are documented.
-  # /health is undocumented but live (returns {"status":"healthy"}).
+
+  rate_limit:
+    max_requests_per_window: 5
+    window_s: 30
+    max_throttle_retries: 2
+
   endpoints:
     weather:
       path: "/weather"
       timeout_s: 15
-      # Set below max_requests_per_window (4 < 5) so not all budget slots
-      # are consumed in one burst — leaves headroom for smoother pacing.
       max_concurrent: 4
-      rate_limit_group: "elyos_api"
-      max_requests_per_window: 5
-      window_s: 30
-      # Adds 2s to the client-side window (effective 32s) to prevent
-      # boundary-burst throttling when timestamps expire near the edge.
-      rate_limit_safety_s: 2
-      max_throttle_retries: 5
-      max_timeout_retries: 1
-      retry_jitter_s: 0.5
     research:
       path: "/research"
       timeout_s: 20
-      # Only 1: research calls are slow (3-8s) and share the same rate
-      # budget — parallel research would exhaust the budget quickly.
       max_concurrent: 1
-      rate_limit_group: "elyos_api"
-      max_requests_per_window: 5
-      window_s: 30
-      rate_limit_safety_s: 2
-      max_throttle_retries: 5
       max_timeout_retries: 1
-      retry_jitter_s: 1.0
 
 llm:
   # Use LiteLLM Python SDK for text chat. Model must be a supported text model from backend/reference_docs/allowed_models.csv.

@@ -1,5 +1,7 @@
 # Disciplined Resilience Harness Plan
 
+> **Note:** This is a historical planning document. The config shape has since been simplified — see `backend/chat/config_reference.md` for the current design.
+
 Date: 2026-05-19
 
 ## Objective

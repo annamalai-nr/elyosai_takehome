@@ -1,9 +1,8 @@
-"""Elyos API HTTP client with config-driven retry, jitter, and throttle handling."""
+"""Elyos API HTTP client with throttle and timeout retry."""
 
 import asyncio
 import logging
 import os
-import random
 
 import httpx
 from langsmith import traceable
@@ -11,21 +10,27 @@ from langsmith import traceable
 log = logging.getLogger(__name__)
 
 
+def _retry_after(data: dict) -> float:
+    try:
+        return max(float(data.get("retry_after_seconds") or 30), 0) + 1
+    except (TypeError, ValueError):
+        return 31
+
+
 async def _call_api(
-    client: httpx.AsyncClient, base_url: str, endpoint: str, params: dict, api_key: str, endpoint_cfg: dict,
+    client: httpx.AsyncClient, base_url: str, endpoint: str,
+    params: dict, api_key: str, endpoint_cfg: dict, max_throttle_retries: int,
 ) -> dict:
-    """Make a GET request with timeout retry, throttle retry, and jitter."""
+    """Make a GET request with timeout and throttle retry."""
     timeout = endpoint_cfg["timeout_s"]
-    max_throttle = endpoint_cfg["max_throttle_retries"]
-    max_timeout = endpoint_cfg["max_timeout_retries"]
-    jitter = endpoint_cfg["retry_jitter_s"]
+    max_timeout = endpoint_cfg.get("max_timeout_retries", 0)
 
     throttle_attempts = 0
     timeout_attempts = 0
 
     while True:
         log.debug("API request: GET %s params=%s (throttle=%d/%d, timeout=%d/%d)",
-                   endpoint, params, throttle_attempts, max_throttle, timeout_attempts, max_timeout)
+                   endpoint, params, throttle_attempts, max_throttle_retries, timeout_attempts, max_timeout)
         try:
             resp = await client.get(
                 f"{base_url}{endpoint}",
@@ -42,7 +47,7 @@ async def _call_api(
                 return {"error": "request_timeout", "message": f"{endpoint} request timed out after {timeout_attempts} attempts"}
             log.warning("Timeout on %s, retrying (attempt %d/%d)", endpoint, timeout_attempts, max_timeout)
             print(f"\r  Timed out, retrying...", flush=True)
-            await asyncio.sleep(random.uniform(0, jitter))
+            await asyncio.sleep(1)
             continue
         except httpx.HTTPError as exc:
             log.warning("HTTP error on %s: %s", endpoint, exc)
@@ -64,28 +69,29 @@ async def _call_api(
             return data
 
         throttle_attempts += 1
-        wait = data.get("retry_after_seconds", 30) + 1 + random.uniform(0, jitter)
-        if throttle_attempts > max_throttle:
+        wait = _retry_after(data)
+        if throttle_attempts > max_throttle_retries:
             log.warning("Throttle retries exhausted on %s", endpoint)
             return {"error": "throttle_exhausted", "message": "Rate limit retries exhausted"}
-        log.warning("Throttled on %s, retrying in %ds (attempt %d/%d)", endpoint, int(wait), throttle_attempts, max_throttle)
+        log.warning("Throttled on %s, retrying in %ds (attempt %d/%d)", endpoint, int(wait), throttle_attempts, max_throttle_retries)
         print(f"\r  Rate-limited, retrying in {int(wait)}s...", flush=True)
         await asyncio.sleep(wait)
 
 
-def _endpoint_args(cfg: dict, endpoint_name: str) -> tuple[str, str, dict]:
+def _endpoint_args(cfg: dict, endpoint_name: str) -> tuple[str, str, dict, int]:
     api_cfg = cfg["elyos_api"]
     ep_cfg = api_cfg["endpoints"][endpoint_name]
-    return api_cfg["base_url"], os.environ[api_cfg["api_key_env"]], ep_cfg
+    max_throttle = api_cfg["rate_limit"]["max_throttle_retries"]
+    return api_cfg["base_url"], os.environ[api_cfg["api_key_env"]], ep_cfg, max_throttle
 
 
 @traceable(run_type="tool", name="elyos_weather_call")
 async def get_weather(client: httpx.AsyncClient, cfg: dict, location: str) -> dict:
-    base_url, api_key, ep_cfg = _endpoint_args(cfg, "weather")
-    return await _call_api(client, base_url, ep_cfg["path"], {"location": location}, api_key, ep_cfg)
+    base_url, api_key, ep_cfg, max_throttle = _endpoint_args(cfg, "weather")
+    return await _call_api(client, base_url, ep_cfg["path"], {"location": location}, api_key, ep_cfg, max_throttle)
 
 
 @traceable(run_type="tool", name="elyos_research_call")
 async def research_topic(client: httpx.AsyncClient, cfg: dict, topic: str) -> dict:
-    base_url, api_key, ep_cfg = _endpoint_args(cfg, "research")
-    return await _call_api(client, base_url, ep_cfg["path"], {"topic": topic}, api_key, ep_cfg)
+    base_url, api_key, ep_cfg, max_throttle = _endpoint_args(cfg, "research")
+    return await _call_api(client, base_url, ep_cfg["path"], {"topic": topic}, api_key, ep_cfg, max_throttle)

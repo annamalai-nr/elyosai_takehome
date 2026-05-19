@@ -1,5 +1,7 @@
 # Case Study: Probe Findings to Chat-App Runtime Coverage
 
+> **Note:** This is a historical audit. The config shape has since been simplified — see `backend/chat/config_reference.md` for the current design.
+
 - **Original date:** 2026-05-18
 - **Updated:** 2026-05-19
 - **Reason for update:** The original audit was written before the ReAct refactor,

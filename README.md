@@ -233,5 +233,5 @@ coverage audits:
   HTTP 200 with a `{"status":"throttled","retry_after_seconds":N,...}` body.
   A controlled probe confirmed they share a single server-side rate budget
   (see `probe_reports/shared_rate_limit_bucket_report.html`). The chat app
-  uses a shared `rate_limit_group` with proactive budget pacing and bounded
-  concurrency to stay within limits. **Cancelled calls still consume a slot.**
+  uses one API-level `rate_limit` block with proactive budget pacing and
+  bounded concurrency to stay within limits. **Cancelled calls still consume a slot.**
