@@ -44,9 +44,6 @@ llm:
   reasoning_effort: "none"
 
 cli_chat:
-  # Pending-state phrase printed when a slow tool is in flight.
-  pending_phrase: "Researching {topic}... (Ctrl+C to cancel)"
-  # Maximum conversation turns retained in history (the take-home requires this be maintained).
+  # Trim oldest complete turns when the message list exceeds this count.
+  # Keeps system prompt + most recent turns. 0 or absent = no limit.
   max_history_messages: 40
-
-outputs_dir: backend/outputs

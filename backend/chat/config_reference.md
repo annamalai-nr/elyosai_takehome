@@ -70,3 +70,11 @@ only 1-3 seconds.
 |-------|------|---------|---------|
 | `path` | string | `"/weather"` | URL path appended to `base_url`. |
 | `timeout_s` | number | `15` (weather), `20` (research) | HTTP response timeout. Weather is fast (~200ms) so 15s is generous. Research is slow (3-8s) so 20s gives it room. |
+
+---
+
+## Session (`cli_chat`)
+
+| Field | Type | Default | Purpose |
+|-------|------|---------|---------|
+| `max_history_messages` | int | `0` (no limit) | Maximum number of messages in the conversation history sent to the LLM. When exceeded, the oldest complete turns are trimmed while preserving the system prompt and the current user message. Trimming happens at user-message boundaries to avoid orphaning tool-call/tool-result pairs. |

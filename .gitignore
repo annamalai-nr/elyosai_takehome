@@ -56,3 +56,8 @@ backend/logs/
 
 # Other project files/folders
 _archive/
+
+
+# For the time being 
+api_reconnaissance/
+api_reconnaissance_known_things/

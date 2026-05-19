@@ -17,6 +17,20 @@ _turn_task: asyncio.Task | None = None
 EXIT_COMMANDS: frozenset[str] = frozenset({"quit", "exit", "q"})
 
 
+def _trim_history(messages: list[dict], max_messages: int) -> None:
+    """Trim oldest complete turns, preserving system prompt and valid tool-call groups."""
+    if max_messages <= 0 or len(messages) <= max_messages:
+        return
+    turn_starts = [i for i, msg in enumerate(messages) if msg.get("role") == "user"]
+    for start in turn_starts:
+        kept_len = 1 + len(messages) - start
+        if kept_len <= max_messages:
+            del messages[1:start]
+            return
+    if turn_starts:
+        del messages[1:turn_starts[-1]]
+
+
 def _on_sigint() -> None:
     if _turn_task and not _turn_task.done():
         _turn_task.cancel()
@@ -52,8 +66,11 @@ async def _async_main() -> None:
                 continue
 
             loop.add_signal_handler(signal.SIGINT, _on_sigint)
-            turn_start = len(messages)
             messages.append({"role": "user", "content": user_input})
+            max_hist = cfg.get("cli_chat", {}).get("max_history_messages", 0)
+            if max_hist:
+                _trim_history(messages, max_hist)
+            turn_start = len(messages) - 1
             print("Assistant: ", end="", flush=True)
 
             session_state["partial"] = ""
