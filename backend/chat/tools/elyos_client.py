@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 
 import httpx
 from langsmith import traceable
@@ -9,12 +10,9 @@ log = logging.getLogger(__name__)
 MAX_THROTTLE_RETRIES: int = 5
 
 
-@traceable(run_type="tool", name="elyos_api_call")
-async def call_api(
-    client: httpx.AsyncClient, base_url: str, endpoint: str, params: dict, api_key: str,
+async def _call_api(
+    client: httpx.AsyncClient, base_url: str, endpoint: str, params: dict, api_key: str, timeout: float,
 ) -> dict:
-    timeout = 20.0 if endpoint == "/research" else 15.0
-
     for attempt in range(MAX_THROTTLE_RETRIES + 1):
         log.debug("API request: GET %s params=%s (attempt %d)", endpoint, params, attempt + 1)
         try:
@@ -54,3 +52,17 @@ async def call_api(
         await asyncio.sleep(wait)
 
     return {"error": "throttle_exhausted", "message": "Rate limit retries exhausted"}
+
+
+@traceable(run_type="tool", name="elyos_weather_call")
+async def get_weather(client: httpx.AsyncClient, cfg: dict, location: str) -> dict:
+    base_url = cfg["elyos_api"]["base_url"]
+    api_key = os.environ[cfg["elyos_api"]["api_key_env"]]
+    return await _call_api(client, base_url, "/weather", {"location": location}, api_key, timeout=15.0)
+
+
+@traceable(run_type="tool", name="elyos_research_call")
+async def research_topic(client: httpx.AsyncClient, cfg: dict, topic: str) -> dict:
+    base_url = cfg["elyos_api"]["base_url"]
+    api_key = os.environ[cfg["elyos_api"]["api_key_env"]]
+    return await _call_api(client, base_url, "/research", {"topic": topic}, api_key, timeout=20.0)
