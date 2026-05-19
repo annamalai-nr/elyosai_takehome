@@ -1,13 +1,19 @@
 """Proactive rate-limit pacing and bounded tool execution."""
 
+from __future__ import annotations
+
 import asyncio
 import collections
 import logging
 import time
+from typing import TYPE_CHECKING
 
 import httpx
 
 from backend.chat.tools.dispatch import execute_tool_call
+
+if TYPE_CHECKING:
+    from backend.chat.models import ToolCall
 
 log = logging.getLogger(__name__)
 
@@ -45,8 +51,12 @@ async def wait_for_budget(state: dict, endpoint_cfg: dict) -> None:
 
 
 async def bounded_execute(
-    sem: asyncio.Semaphore, client: httpx.AsyncClient, cfg: dict, state: dict,
-    endpoint_cfg: dict, tool_call,
+    sem: asyncio.Semaphore,
+    client: httpx.AsyncClient,
+    cfg: dict,
+    state: dict,
+    endpoint_cfg: dict,
+    tool_call: "ToolCall",
 ) -> dict:
     async with sem:
         await wait_for_budget(state, endpoint_cfg)

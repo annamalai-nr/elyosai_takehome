@@ -36,16 +36,17 @@ async def stream_turn(
 
         log.debug("Round %d: executing %d tool call(s)", _round + 1, len(turn.tool_calls))
         sems: dict[str, asyncio.Semaphore] = {}
-        ep_per_tc: list[str] = []
-        for tc in turn.tool_calls:
-            ep = _TOOL_ENDPOINT.get(tc.name, "weather")
-            ep_per_tc.append(ep)
+        pairs = [
+            (_TOOL_ENDPOINT.get(tc.name, "weather"), tc)
+            for tc in turn.tool_calls
+        ]
+        for ep, _ in pairs:
             if ep not in sems:
                 sems[ep] = asyncio.Semaphore(endpoints[ep]["max_concurrent"])
 
         observations = await asyncio.gather(*[
             bounded_execute(sems[ep], client, cfg, state, endpoints[ep], tc)
-            for ep, tc in zip(ep_per_tc, turn.tool_calls)
+            for ep, tc in pairs
         ])
         messages.extend(observations)
 
