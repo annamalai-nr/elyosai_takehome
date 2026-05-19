@@ -1,7 +1,7 @@
 import json
 
-from backend.chat.core.models import NormalisedWeather, ResearchResult
-from backend.chat.core.parsers import envelope, normalise_weather, parse_research
+from backend.chat.models import NormalisedWeather, ResearchResult
+from backend.chat.parsers import envelope, normalise_weather, parse_research
 
 
 def validate() -> None:

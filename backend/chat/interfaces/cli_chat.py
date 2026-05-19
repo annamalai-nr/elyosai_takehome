@@ -4,7 +4,7 @@ import signal
 
 import httpx
 
-from backend.chat.core.engine import stream_turn
+from backend.chat.agent import stream_turn
 from backend.chat.load_config import load_config
 from backend.chat.prompts import SYSTEM_PROMPT
 

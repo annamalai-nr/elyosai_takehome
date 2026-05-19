@@ -47,18 +47,21 @@ Builds a CLI streaming chat application that calls two real-world APIs
 │   ├── __init__.py
 │   ├── chat/                          streaming CLI chat package
 │   │   ├── __init__.py
-│   │   ├── __main__.py                python -m backend.chat support
+│   │   ├── __main__.py                python -m backend.chat (argparse)
 │   │   ├── config.yaml                model selection + Elyos API config
 │   │   ├── paths.py                   package path constants
 │   │   ├── load_config.py             config loader + validation
-│   │   ├── prompts.py                 system prompt + tool definitions
-│   │   ├── core/
-│   │   │   ├── models.py              Pydantic models (weather, research)
-│   │   │   ├── parsers.py             response parsers + JSON envelope
-│   │   │   └── engine.py              API calls, tool exec, LLM streaming
+│   │   ├── models.py                  Pydantic models (domain + LLM turn)
+│   │   ├── parsers/                   response parsers + JSON envelope
+│   │   │   ├── weather.py             /weather response normalization
+│   │   │   └── research.py            /research response normalization
+│   │   ├── prompts.py                 system prompt
+│   │   ├── tools.py                   tool schemas + execution + Elyos API
+│   │   ├── llm_client.py              LiteLLM streaming adapter
+│   │   ├── agent.py                   ReAct loop orchestration
+│   │   ├── validate.py                parser fixture tests (--validate)
 │   │   └── interfaces/
-│   │       ├── cli_chat.py            interactive REPL + SIGINT handling
-│   │       └── validate.py            parser fixture tests (--validate)
+│   │       └── cli_chat.py            interactive REPL + SIGINT handling
 │   ├── llm_utils/                     ported LiteLLM kwargs helpers
 │   │   └── litellm_kwargs.py
 │   ├── reference_docs/                allowed model names + LLM rules
@@ -193,7 +196,7 @@ root cause and `fix-round-*.md` for the iterative fix attempts.
 | 0. Setup | conda env, `.env`, `pip install -e .` | Done | this README |
 | 1. Investigation | probe `/weather` + `/research`, document findings | Done | `probe_reports/*.html` |
 | 2. Build | CLI streaming chat with tool calling | Done | `backend/chat/` |
-| 3. Harden | add handling for confirmed quirks + fix research hallucination | Done | `backend/chat/core/parsers.py`, `case_studies/` |
+| 3. Harden | add handling for confirmed quirks + fix research hallucination | Done | `backend/chat/parsers/`, `case_studies/` |
 | 4. Loom | 10–15 min walkthrough | | take-home PDF §Part 2 |
 | 5. Submit | code + Loom + AI session transcript | | take-home PDF §Logistics |
 
