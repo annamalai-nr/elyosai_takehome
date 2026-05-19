@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Elyos API Shared Rate-Limit Bucket Probe</title>
+  <style>
+    :root {
+      --bg: #fbfbf8;
+      --text: #1f2933;
+      --muted: #667085;
+      --rule: #d9dee7;
+      --panel: #ffffff;
+      --good: #067647;
+      --warn: #b54708;
+      --info: #175cd3;
+      --code: #f3f4f6;
+    }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    main {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 40px 24px 64px;
+    }
+    h1, h2, h3 { line-height: 1.2; }
+    h1 { font-size: 34px; margin-bottom: 8px; }
+    h2 { margin-top: 36px; border-top: 1px solid var(--rule); padding-top: 24px; }
+    h3 { margin-top: 24px; }
+    .subtitle { color: var(--muted); font-size: 18px; margin-bottom: 24px; }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--rule);
+      border-radius: 8px;
+      padding: 18px 20px;
+      margin: 18px 0;
+    }
+    .verdict {
+      border-left: 4px solid var(--good);
+    }
+    .caution {
+      border-left: 4px solid var(--warn);
+    }
+    .info {
+      border-left: 4px solid var(--info);
+    }
+    code, pre {
+      background: var(--code);
+      border-radius: 4px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.92em;
+    }
+    code { padding: 1px 4px; }
+    pre {
+      overflow-x: auto;
+      padding: 14px 16px;
+      border: 1px solid var(--rule);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      background: var(--panel);
+    }
+    th, td {
+      border: 1px solid var(--rule);
+      padding: 10px 12px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: #f8fafc; }
+    .ok { color: var(--good); font-weight: 700; }
+    .throttle { color: var(--warn); font-weight: 700; }
+    .meta { color: var(--muted); }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Elyos API Shared Rate-Limit Bucket Probe</h1>
+  <div class="subtitle">
+    Cross-endpoint interleaving probe for <code>/weather</code> and <code>/research</code>.
+    Generated 2026-05-19.
+  </div>
+
+  <section class="card verdict">
+    <h2>Executive Summary</h2>
+    <p>
+      The <code>/weather</code> and <code>/research</code> endpoints share the same effective
+      rate-limit bucket for the tested API key. This was not proven by the earlier same-endpoint
+      probes; it required interleaving the two endpoints within one throttle window.
+    </p>
+    <p>
+      The observed bucket is approximately <strong>5 successful content responses per ~30 second
+      window</strong>. After those five slots are consumed by any mix of the two endpoints, the
+      next content request returns HTTP 200 with a throttle envelope.
+    </p>
+  </section>
+
+  <section>
+    <h2>Why This Probe Was Needed</h2>
+    <p>
+      Earlier reports established that both endpoints use the same throttle envelope shape:
+    </p>
+    <pre><code>{"status":"throttled","message":"Rate limit exceeded. Please wait.","retry_after_seconds":29,"data":null}</code></pre>
+    <p>
+      However, the earlier <code>/research</code> report explicitly listed shared bucket behavior
+      as unknown: same-endpoint sequences had been tested, but cross-endpoint interleaving had not.
+      This probe closes that gap.
+    </p>
+  </section>
+
+  <section>
+    <h2>Method</h2>
+    <p>
+      Both experiments used one API key and waited for a clean window before starting. A preflight
+      request confirmed the API was not currently throttled, then the probe slept 32 seconds to
+      clear the preflight slot before starting the measured sequence.
+    </p>
+    <p>
+      The probe intentionally avoided uncontrolled load. It sent the minimum number of calls needed
+      to test whether slots consumed by one endpoint affect the other endpoint.
+    </p>
+  </section>
+
+  <section>
+    <h2>Experiment A: Weather Exhausts Research</h2>
+    <h3>Question</h3>
+    <p>
+      If five successful <code>/weather</code> calls consume the window, does the next
+      <code>/research</code> call throttle?
+    </p>
+
+    <h3>Sequence</h3>
+    <pre><code>clean window
+5 successful /weather calls
+immediate /research call</code></pre>
+
+    <h3>Observed Output</h3>
+    <table>
+      <thead>
+        <tr><th>Call</th><th>Endpoint</th><th>Result</th><th>Latency</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td><code>/weather</code></td><td class="ok">success</td><td>0.12 s</td><td>London weather payload</td></tr>
+        <tr><td>2</td><td><code>/weather</code></td><td class="ok">success</td><td>0.11 s</td><td>London weather payload</td></tr>
+        <tr><td>3</td><td><code>/weather</code></td><td class="ok">success</td><td>0.13 s</td><td>London weather payload</td></tr>
+        <tr><td>4</td><td><code>/weather</code></td><td class="ok">success</td><td>0.11 s</td><td>London weather payload</td></tr>
+        <tr><td>5</td><td><code>/weather</code></td><td class="ok">success</td><td>0.11 s</td><td>London weather payload</td></tr>
+        <tr><td>6</td><td><code>/research</code></td><td class="throttle">throttled</td><td>0.03 s</td><td><code>retry_after_seconds=29</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3>Verdict</h3>
+    <p>
+      <code>/research</code> throttled immediately after five successful <code>/weather</code>
+      calls. This supports a shared rate-limit bucket.
+    </p>
+  </section>
+
+  <section>
+    <h2>Experiment B: Research Consumes The Fifth Shared Slot</h2>
+    <h3>Question</h3>
+    <p>
+      If four <code>/weather</code> calls succeed and the fifth slot is consumed by
+      <code>/research</code>, does the next <code>/weather</code> call throttle?
+    </p>
+
+    <h3>Sequence</h3>
+    <pre><code>clean window
+4 successful /weather calls
+1 successful /research call
+immediate /weather call</code></pre>
+
+    <h3>Observed Output</h3>
+    <table>
+      <thead>
+        <tr><th>Call</th><th>Endpoint</th><th>Result</th><th>Latency</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td><code>/weather</code></td><td class="ok">success</td><td>0.12 s</td><td>London weather payload</td></tr>
+        <tr><td>2</td><td><code>/weather</code></td><td class="ok">success</td><td>0.12 s</td><td>London weather payload</td></tr>
+        <tr><td>3</td><td><code>/weather</code></td><td class="ok">success</td><td>0.12 s</td><td>London weather payload</td></tr>
+        <tr><td>4</td><td><code>/weather</code></td><td class="ok">success</td><td>0.12 s</td><td>London weather payload</td></tr>
+        <tr><td>5</td><td><code>/research</code></td><td class="ok">success</td><td>3.48 s</td><td>Fresh research payload</td></tr>
+        <tr><td>6</td><td><code>/weather</code></td><td class="throttle">throttled</td><td>0.03 s</td><td><code>retry_after_seconds=26</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3>Verdict</h3>
+    <p>
+      The successful <code>/research</code> call consumed the fifth shared slot. The next
+      <code>/weather</code> call returned the throttle envelope. This confirms that both endpoints
+      draw from the same effective bucket.
+    </p>
+  </section>
+
+  <section class="card info">
+    <h2>Chat App Implications</h2>
+    <ul>
+      <li>
+        Configure both endpoints with the same local rate-limit group, for example
+        <code>rate_limit_group: "elyos_api"</code>.
+      </li>
+      <li>
+        Keep endpoint-specific concurrency limits separate: <code>/weather</code> can be more
+        concurrent than <code>/research</code>, but both must spend from the same request budget.
+      </li>
+      <li>
+        A user asking for weather plus research in one turn can exhaust the same shared bucket.
+        The harness should coordinate these calls instead of treating each endpoint as having its
+        own independent five-call window.
+      </li>
+      <li>
+        Continue treating the server's <code>retry_after_seconds</code> as authoritative. The local
+        shared-budget limiter is a conservative preflight guard, not a replacement for reactive
+        throttle handling.
+      </li>
+    </ul>
+  </section>
+
+  <section class="card caution">
+    <h2>Remaining Caveats</h2>
+    <ul>
+      <li>
+        This proves shared behavior for the tested API key and current deployment. It does not prove
+        whether the bucket is per key, per IP, global, or some combination.
+      </li>
+      <li>
+        The exact server-side algorithm is still approximate. The observed behavior is consistent
+        with roughly five successful content calls per sliding ~30 second window.
+      </li>
+      <li>
+        The client should still parse every HTTP 200 response body because throttles are returned as
+        body-side envelopes, not HTTP 429 responses.
+      </li>
+    </ul>
+  </section>
+
+  <footer class="meta">
+    Source: controlled cross-endpoint interleaving probe run from the repository root on 2026-05-19.
+    The literal API key is intentionally not recorded in this report.
+  </footer>
+</main>
+</body>
+</html>

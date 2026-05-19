@@ -2,13 +2,13 @@
 
 - **Date:** 2026-05-19
 - **Scope:** Cross-reference all 4 probe reports against the current `backend/chat/` implementation after the ReAct refactor and disciplined resilience harness. Also reconcile against the earlier Codex audit (`2026-05-18-probe-findings-chat-app-coverage.md`).
-- **Verdict:** Core runtime behavior is solid. Resilience harness adds proactive budget pacing, bounded concurrent execution, timeout retry, config-driven policy, and startup validation — all tested. Two low-priority items remain.
+- **Verdict:** Core runtime behavior is solid. Resilience harness adds proactive budget pacing, bounded concurrent execution, timeout retry, config-driven policy, and startup validation — covered by 16 self-tests, with `rate_limit_safety_s` behavior still needing a direct test. Two low-priority items remain.
 
 ---
 
 ## Codex Audit Reconciliation
 
-The earlier Codex audit (`2026-05-18-probe-findings-chat-app-coverage.md`) was written against the pre-refactor `core/engine.py` layout. Several of its P1/P2 items have since been resolved. Its "Source Material Reviewed" section (lines 49-54) still references deleted paths (`core/engine.py`, `core/parsers.py`, `core/models.py`, `interfaces/validate.py`).
+The earlier Codex audit (`2026-05-18-probe-findings-chat-app-coverage.md`) was written against the pre-refactor `core/engine.py` layout. Several of its P1/P2 items have since been resolved. Its "Source Material Reviewed" section has been updated to reference current paths.
 
 ### Items Codex flagged that are now fixed
 
@@ -34,7 +34,7 @@ The earlier Codex audit (`2026-05-18-probe-findings-chat-app-coverage.md`) was w
 | Codex item | Status | My assessment |
 |------------|--------|---------------|
 | **P2.1** `DISCOVERIES.md` matrix | Open | Not done. Lower priority — the Loom walkthrough can cover this verbally. |
-| **P2.2** README shared throttle bucket wording | Open | README says "share a sliding window" which was not proven by probes. Minor wording fix. |
+| **P2.2** README shared throttle bucket wording | **Resolved** | README now references `shared_rate_limit_bucket_report.html` and describes confirmed shared budget with proactive pacing. |
 | **P2.4** Expand validators | **Partially resolved** | 16 tests now (9 parser + 7 resilience). Resilience tests cover config rejection, budget pacing, shared groups, persistence, and concurrent waiter serialization. Could still add throttle/error/long-topic cases. |
 | **P2.6** Topic-neutral prompt examples | Polish | Current example uses "climate change". Cosmetic. |
 

@@ -77,7 +77,7 @@ async def stream_turn(
             state["partial"] = ""
             return
 
-        log.info("Round %d: executing %d tool call(s)", _round + 1, len(turn.tool_calls))
+        log.debug("Round %d: executing %d tool call(s)", _round + 1, len(turn.tool_calls))
         sems: dict[str, asyncio.Semaphore] = {}
         ep_per_tc: list[str] = []
         for tc in turn.tool_calls:

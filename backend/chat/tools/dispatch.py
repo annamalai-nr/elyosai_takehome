@@ -28,14 +28,14 @@ async def execute_tool_call(client: httpx.AsyncClient, cfg: dict, call: ToolCall
 
     if call.name == "get_weather":
         location = args.get("location", "")
-        log.info("Executing get_weather(location=%s)", location)
+        log.debug("Executing get_weather(location=%s)", location)
         print(f"\r  Looking up weather for {location}...", flush=True)
         data = await get_weather(client, cfg, location)
         content = envelope(call.name, normalise_weather(data, location))
 
     elif call.name == "research_topic":
         topic = args.get("topic", "")
-        log.info("Executing research_topic(topic=%s)", topic[:50])
+        log.debug("Executing research_topic(topic=%s)", topic[:50])
         print(f"\r  Researching {topic}... (Ctrl+C to cancel)", flush=True)
         data = await research_topic(client, cfg, topic)
         content = envelope(call.name, parse_research(data))

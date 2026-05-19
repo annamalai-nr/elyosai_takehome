@@ -69,8 +69,8 @@ async def stream_llm_turn(cfg: dict, messages: list[dict], state: dict) -> LLMTu
     content_text = "".join(content_parts)
 
     if raw_tool_calls:
-        log.info("LLM requested %d tool call(s): %s", len(raw_tool_calls),
-                 ", ".join(tc["name"] for tc in raw_tool_calls.values()))
+        log.debug("LLM requested %d tool call(s): %s", len(raw_tool_calls),
+                  ", ".join(tc["name"] for tc in raw_tool_calls.values()))
     else:
         print()
 

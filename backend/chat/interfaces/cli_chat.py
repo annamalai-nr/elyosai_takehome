@@ -28,7 +28,7 @@ async def _async_main() -> None:
     global _turn_task
     cfg = load_config()
     messages: list[dict] = [{"role": "system", "content": SYSTEM_PROMPT}]
-    log.info("Session started: model=%s", cfg["llm"]["model_name"])
+    log.debug("Session started: model=%s", cfg["llm"]["model_name"])
     print(f"Elyos Chat (model: {cfg['llm']['model_name']})")
     print("Type 'quit' to exit.\n")
 
@@ -61,7 +61,7 @@ async def _async_main() -> None:
             try:
                 await _turn_task
             except asyncio.CancelledError:
-                log.info("Turn cancelled by user (SIGINT)")
+                log.debug("Turn cancelled by user (SIGINT)")
                 print("\nCancelled. The interrupted API call may still count against the rate limit.")
                 del messages[turn_start:]
                 if session_state["partial"]:

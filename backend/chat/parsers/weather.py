@@ -27,7 +27,7 @@ def normalise_weather(data: dict, requested_location: str) -> NormalisedWeather 
         return {"error": "unknown_schema", "message": f"Unrecognised weather shape: {list(data.keys())}"}
 
     if requested_location != returned_location:
-        log.info("Weather location mismatch: requested=%s returned=%s", requested_location, returned_location)
+        log.debug("Weather location mismatch: requested=%s returned=%s", requested_location, returned_location)
 
     return NormalisedWeather(
         requested_location=requested_location,
