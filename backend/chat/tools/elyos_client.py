@@ -30,6 +30,8 @@ async def _call_api(
                 headers={"X-API-Key": api_key},
                 timeout=timeout,
             )
+        except asyncio.CancelledError:
+            raise
         except httpx.TimeoutException:
             timeout_attempts += 1
             if timeout_attempts > max_timeout:
@@ -68,17 +70,19 @@ async def _call_api(
         await asyncio.sleep(wait)
 
 
+def _endpoint_args(cfg: dict, endpoint_name: str) -> tuple[str, str, dict]:
+    api_cfg = cfg["elyos_api"]
+    ep_cfg = api_cfg["endpoints"][endpoint_name]
+    return api_cfg["base_url"], os.environ[api_cfg["api_key_env"]], ep_cfg
+
+
 @traceable(run_type="tool", name="elyos_weather_call")
 async def get_weather(client: httpx.AsyncClient, cfg: dict, location: str) -> dict:
-    base_url = cfg["elyos_api"]["base_url"]
-    api_key = os.environ[cfg["elyos_api"]["api_key_env"]]
-    ep_cfg = cfg["elyos_api"]["endpoints"]["weather"]
+    base_url, api_key, ep_cfg = _endpoint_args(cfg, "weather")
     return await _call_api(client, base_url, ep_cfg["path"], {"location": location}, api_key, ep_cfg)
 
 
 @traceable(run_type="tool", name="elyos_research_call")
 async def research_topic(client: httpx.AsyncClient, cfg: dict, topic: str) -> dict:
-    base_url = cfg["elyos_api"]["base_url"]
-    api_key = os.environ[cfg["elyos_api"]["api_key_env"]]
-    ep_cfg = cfg["elyos_api"]["endpoints"]["research"]
+    base_url, api_key, ep_cfg = _endpoint_args(cfg, "research")
     return await _call_api(client, base_url, ep_cfg["path"], {"topic": topic}, api_key, ep_cfg)

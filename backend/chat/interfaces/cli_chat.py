@@ -27,6 +27,8 @@ async def _async_main() -> None:
     print(f"Elyos Chat (model: {cfg['llm']['model_name']})")
     print("Type 'quit' to exit.\n")
 
+    session_state: dict = {"partial": "", "rate_budgets": {}, "rate_budget_locks": {}}
+
     async with httpx.AsyncClient() as http_client:
         loop = asyncio.get_running_loop()
 
@@ -49,16 +51,16 @@ async def _async_main() -> None:
             messages.append({"role": "user", "content": user_input})
             print("Assistant: ", end="", flush=True)
 
-            state: dict[str, str] = {"partial": ""}
-            _turn_task = asyncio.create_task(stream_turn(http_client, cfg, messages, state))
+            session_state["partial"] = ""
+            _turn_task = asyncio.create_task(stream_turn(http_client, cfg, messages, session_state))
             try:
                 await _turn_task
             except asyncio.CancelledError:
                 print("\nCancelled. The interrupted API call may still count against the rate limit.")
                 del messages[turn_start:]
-                if state["partial"]:
+                if session_state["partial"]:
                     messages.append({"role": "user", "content": user_input})
-                    messages.append({"role": "assistant", "content": state["partial"] + " [interrupted]"})
+                    messages.append({"role": "assistant", "content": session_state["partial"] + " [interrupted]"})
             finally:
                 _turn_task = None
 

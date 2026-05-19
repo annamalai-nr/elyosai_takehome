@@ -11,6 +11,9 @@ elyos_api:
       path: "/weather"
       timeout_s: 15
       max_concurrent: 4
+      rate_limit_group: "elyos_api"
+      max_requests_per_window: 5
+      window_s: 30
       max_throttle_retries: 5
       max_timeout_retries: 1
       retry_jitter_s: 0.5
@@ -18,6 +21,9 @@ elyos_api:
       path: "/research"
       timeout_s: 20
       max_concurrent: 1
+      rate_limit_group: "elyos_api"
+      max_requests_per_window: 5
+      window_s: 30
       max_throttle_retries: 5
       max_timeout_retries: 1
       retry_jitter_s: 1.0

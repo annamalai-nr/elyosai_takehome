@@ -21,8 +21,10 @@ def main(argv: list[str] | None = None) -> None:
 
     if args.validate:
         from backend.chat.validate import validate
+        from backend.chat.validate_resilience import validate_resilience
 
         validate()
+        validate_resilience()
     else:
         from backend.chat.interfaces.cli_chat import main as cli_main
 
