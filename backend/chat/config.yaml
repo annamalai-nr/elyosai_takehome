@@ -7,11 +7,20 @@ elyos_api:
   # Per the take-home PDF: only /weather and /research are documented.
   # /health is undocumented but live (returns {"status":"healthy"}).
   endpoints:
-    weather:  "/weather"          # GET, ~200 ms, query: location (string)
-    research: "/research"         # GET, 3-8 s,  query: topic (string)
-  request_timeout_seconds: 15     # explicit read timeout shorter than user deadline
-  # Hard cap on calls per probe run, to protect against accidental bursts.
-  probe_call_budget: 25
+    weather:
+      path: "/weather"
+      timeout_s: 15
+      max_concurrent: 4
+      max_throttle_retries: 5
+      max_timeout_retries: 1
+      retry_jitter_s: 0.5
+    research:
+      path: "/research"
+      timeout_s: 20
+      max_concurrent: 1
+      max_throttle_retries: 5
+      max_timeout_retries: 1
+      retry_jitter_s: 1.0
 
 llm:
   # Use LiteLLM Python SDK for text chat. Model must be a supported text model from backend/reference_docs/allowed_models.csv.
