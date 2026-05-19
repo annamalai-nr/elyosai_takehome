@@ -88,8 +88,11 @@ Do not move or rewrite these unless an import path must be updated:
   - Preserve `--validate`.
   - Unknown arguments should continue to raise argparse errors.
 
-- `backend/chat/tools.py`
-  - Keep `TOOLS` here.
+- `backend/chat/tools/`
+  - Keep `TOOLS` in `tools/schemas.py`.
+  - Keep tool execution dispatch in `tools/runtime.py`.
+  - Keep raw Elyos HTTP client in `tools/elyos_client.py`.
+  - `tools/__init__.py` re-exports `TOOLS` and `execute_tool_call`.
   - Keep the improved `research_topic` tool description:
     `"Look up a best-effort research summary. May return generic, cached, truncated, or timeout results."`
 
@@ -213,34 +216,14 @@ async def stream_llm_turn(cfg: dict, messages: list[dict], state: dict) -> LLMTu
 
 `agent.py` should not need to know how streamed tool-call deltas are assembled.
 
-### 3. Expand `backend/chat/tools.py` into schemas plus tool execution
+### 3. Split `backend/chat/tools/` into schemas, runtime, and client
 
-Purpose: tool definitions and tool execution dispatch.
+The `tools/` package has three modules:
 
-Keep `TOOLS` in this file.
-
-Move `execute_tool(...)` or an equivalent `execute_tool_call(...)` here.
-Also keep the raw Elyos API helper here instead of creating a weak one-function `elyos_api.py` split.
-This is intentional: there are only two tools and one API backend, so keeping tool dispatch and API calling together is clearer at this scale.
-
-This module should own:
-
-- tool JSON schemas;
-- parsing raw tool-call arguments;
-- mapping tool names to the correct API endpoint;
-- raw Elyos HTTP requests;
-- `MAX_THROTTLE_RETRIES`;
-- endpoint timeout selection;
-- timeout handling;
-- HTTP error handling;
-- JSON parsing;
-- throttle retry loop;
-- printing CLI pending messages:
-  - `Looking up weather for ...`
-  - `Researching ... (Ctrl+C to cancel)`
-- normalizing API results with `normalise_weather(...)` and `parse_research(...)`;
-- wrapping normalized output with `envelope(...)`;
-- returning a tool observation message for `agent.py` to append.
+- `tools/schemas.py`: LLM tool JSON schemas only (`TOOLS`). No runtime imports.
+- `tools/elyos_client.py`: raw Elyos HTTP client (`call_api`), throttle retry, timeout handling. No knowledge of tool-call protocol or parsers.
+- `tools/runtime.py`: tool execution dispatch (`execute_tool_call`). Parses tool-call arguments, calls `elyos_client.call_api`, normalizes with parsers, wraps in envelope, returns `{"role": "tool", ...}` messages.
+- `tools/__init__.py`: re-exports `TOOLS` and `execute_tool_call`.
 
 Recommended output shape from tool execution:
 
@@ -256,28 +239,11 @@ async def execute_tool_call(client, cfg, call: ToolCall) -> dict:
 
 This keeps `agent.py` free from tool-specific details.
 
-Handle invalid tool arguments equivalently to the current implementation:
+Keep these tracing decorators:
 
 ```python
-{"error": "invalid_args", "message": "..."}
-```
-
-Handle unknown tool names equivalently:
-
-```python
-{"error": "unknown_tool", "message": "..."}
-```
-
-Keep this tracing decorator or equivalent on the tool execution function:
-
-```python
-@traceable(run_type="tool", name="execute_tool")
-```
-
-Keep this tracing decorator on the raw API call helper even if it stays in `tools.py`:
-
-```python
-@traceable(run_type="tool", name="elyos_api_call")
+@traceable(run_type="tool", name="execute_tool")      # runtime.py
+@traceable(run_type="tool", name="elyos_api_call")    # elyos_client.py
 ```
 
 ## Expected Final Module Responsibilities
