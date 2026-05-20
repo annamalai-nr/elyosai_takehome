@@ -1,6 +1,7 @@
 """ReAct agent loop with bounded concurrency."""
 
 import asyncio
+import json
 import logging
 
 import httpx
@@ -22,17 +23,26 @@ async def stream_turn(
     cfg: dict,
     messages: list[dict],
     state: dict,
+    emit=None,
 ) -> None:
     """ReAct loop: LLM turn → tool execution → observation → repeat."""
     endpoints = cfg["elyos_api"]["endpoints"]
 
     for _round in range(MAX_TOOL_ROUNDS):
-        turn = await stream_llm_turn(cfg, messages, state)
+        turn = await stream_llm_turn(cfg, messages, state, emit=emit)
         messages.append(turn.assistant_message)
 
         if not turn.tool_calls:
             state["partial"] = ""
             return
+
+        if emit:
+            for tc in turn.tool_calls:
+                try:
+                    args = json.loads(tc.arguments)
+                except Exception:
+                    args = {}
+                await emit({"type": "tool_start", "name": tc.name, "args": args})
 
         log.debug("Round %d: executing %d tool call(s)", _round + 1, len(turn.tool_calls))
         sems: dict[str, asyncio.Semaphore] = {}
@@ -45,7 +55,7 @@ async def stream_turn(
                 sems[ep] = asyncio.Semaphore(endpoints[ep]["max_concurrent"])
 
         observations = await asyncio.gather(*[
-            bounded_execute(sems[ep], client, cfg, state, tc)
+            bounded_execute(sems[ep], client, cfg, state, tc, emit=emit)
             for ep, tc in pairs
         ])
         messages.extend(observations)

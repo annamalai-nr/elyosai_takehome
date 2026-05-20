@@ -38,7 +38,7 @@ def _accumulate_tool_call(tool_calls: dict[int, dict], tc_delta: Any) -> None:
         entry["args"] += tc_delta.function.arguments
 
 
-async def stream_llm_turn(cfg: dict, messages: list[dict], state: dict) -> LLMTurn:
+async def stream_llm_turn(cfg: dict, messages: list[dict], state: dict, emit=None) -> LLMTurn:
     """Stream one LLM completion, printing content and accumulating tool calls."""
     model = cfg["llm"]["model_name"]
     log.debug("Calling LLM: model=%s messages=%d", model, len(messages))
@@ -59,7 +59,10 @@ async def stream_llm_turn(cfg: dict, messages: list[dict], state: dict) -> LLMTu
             continue
         delta = chunk.choices[0].delta
         if delta.content:
-            print(delta.content, end="", flush=True)
+            if emit:
+                await emit({"type": "text", "content": delta.content})
+            else:
+                print(delta.content, end="", flush=True)
             content_parts.append(delta.content)
             state["partial"] = "".join(content_parts)
         if delta.tool_calls:
@@ -71,7 +74,7 @@ async def stream_llm_turn(cfg: dict, messages: list[dict], state: dict) -> LLMTu
     if raw_tool_calls:
         log.debug("LLM requested %d tool call(s): %s", len(raw_tool_calls),
                   ", ".join(tc["name"] for tc in raw_tool_calls.values()))
-    else:
+    elif not emit:
         print()
 
     return LLMTurn(
