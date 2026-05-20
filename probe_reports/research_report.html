@@ -479,6 +479,11 @@
   (timeout), 2 gave up after 3 throttle retries. Higher retry count (5+) or call serialisation
   needed for /research.
 </div>
+<p>
+  The chat app responds to this by setting <code>research.max_concurrent: 1</code>,
+  which serialises research tool calls from a single LLM turn. This is bounded
+  concurrency, not proactive rate-limit pacing.
+</p>
 <table>
   <thead>
     <tr><th>Call</th><th>Retries</th><th>Result</th><th>Latency</th></tr>
@@ -678,13 +683,14 @@
         Same mechanism as WQ6. Both <code>/weather</code> and <code>/research</code> share a single
         server-side rate budget (~5 requests per 30&nbsp;s window). The <code>config.yaml</code>
         <code>max_throttle_retries</code> is at the API level, not per-endpoint, reflecting this
-        shared budget. Bounded concurrency (<code>max_concurrent</code> semaphores) limits parallel
-        calls, and the reactive throttle retry in <code>elyos_client.py</code> handles any throttle
-        responses using the server&rsquo;s authoritative <code>retry_after_seconds</code>.
+        shared budget. Bounded concurrency (<code>max_concurrent</code> semaphores) limits
+        simultaneous in-flight calls, but it does not track the shared server budget.
+        The reactive throttle retry in <code>elyos_client.py</code> handles throttle responses
+        using the server&rsquo;s authoritative <code>retry_after_seconds</code>.
       </td>
       <td>
         5 weather calls exhaust the shared budget. The next research call gets throttled.
-        <em>The client sleeps for the server-specified retry period and retries successfully.</em>
+        <em>The client sleeps for the server-specified retry period and retries. If retries are exhausted, it returns a <code>throttle_exhausted</code> error.</em>
       </td>
     </tr>
     <tr>
