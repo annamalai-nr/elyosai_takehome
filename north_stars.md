@@ -43,8 +43,7 @@ Project-specific product, UX, and assignment-shape rules belong in
 ## Environment And Testing
 
 1. **Conda only**. Do not use `venv`.
-2. **Use the repo environment**. Run Python code in the `elyosai` conda environment
-   (`/Users/annamalainarayanan/anaconda3/envs/elyosai`).
+2. **Use the repo environment**. Run Python code in the `elyosai` conda environment.
 3. **Use Hatch**. Keep packaging in `pyproject.toml`; do not introduce `setup.py`.
 4. **Use real systems in tests**. Prefer real APIs and real data over mocks and patches —
    the take-home explicitly rewards finding real-world API quirks empirically.

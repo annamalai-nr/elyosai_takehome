@@ -52,8 +52,8 @@ Builds a CLI streaming chat application that calls two real-world APIs
 conda create -n elyosai python=3.12 -y
 conda activate elyosai
 
-# 2. Install the project in editable mode (uses pyproject.toml + Hatch)
-cd /Users/annamalainarayanan/Desktop/personal/interview_prep/elyosai
+# 2. From the repo root, install the project in editable mode
+#    (uses pyproject.toml + Hatch)
 pip install -e .
 
 # 3. Confirm the .env is present without printing the key
@@ -64,7 +64,7 @@ test -f .env && grep -q '^ELYOS_API_KEY=' .env && echo ".env contains ELYOS_API_
 
 ```bash
 conda activate elyosai
-cd /Users/annamalainarayanan/Desktop/personal/interview_prep/elyosai
+# work from the repo root
 ```
 
 ## Running the chat app

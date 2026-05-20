@@ -2,12 +2,9 @@
     "workbench.editorAssociations": {
         "*.copilotmd": "vscode.markdown.preview.editor"
     },
-    "python.defaultInterpreterPath": "/Users/annamalainarayanan/anaconda3/envs/elyosai/bin/python",
     "python.terminal.activateEnvironment": true,
     "python.terminal.activateEnvInCurrentTerminal": true,
-    "python.condaPath": "/Users/annamalainarayanan/anaconda3/envs/elyosai/bin/conda",
     "terminal.integrated.env.osx": {
-        "PATH": "/Users/annamalainarayanan/anaconda3/envs/elyosai/bin:${env:PATH}",
         "PYTHONPATH": "${workspaceFolder}"
     },
     "git.ignoreLimitWarning": true,
