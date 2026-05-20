@@ -89,8 +89,9 @@ The take-home conflates two concerns that should be tackled separately:
 
 - **Investigation** — find quirks in `/weather` and `/research` via standalone
   probe scripts. Output: `DISCOVERIES.md` with confirmed observations.
-  Tool: `initial_api_invocations/probe_injection.py` and any follow-on probe
-  scripts. This wins the "API Discovery & Handling" evaluation criterion.
+  Tools: probe scripts in `backend/probes/` (weather, research, and the two
+  cancellation harnesses). This wins the "API Discovery & Handling"
+  evaluation criterion.
 - **Build** — the chat application itself. Uses the same APIs but only needs
   to handle a realistic subset of discovered quirks. Graded on streaming +
   tool calling + cancellation + pending state + error handling + code clarity.
