@@ -129,7 +129,7 @@ Expected runtime behavior:
 
 ## Probe Alignment Update
 
-This section was added after re-checking `backend/probes` and `probe_reports`. The reason for the update is that the probes support two different controls:
+This section was added after re-checking `backend/probes` and `api_analysis`. The reason for the update is that the probes support two different controls:
 
 1. Endpoint-level concurrency: `/weather` can tolerate more simultaneous work than `/research`, so each endpoint needs its own `max_concurrent` semaphore.
 2. Shared rate-budget pacing: the reports repeatedly show roughly five successful content responses per roughly 30 second window, and the research probe plan treats a shared key/service bucket as likely. Weather and research should therefore default to the same `rate_limit_group`.
@@ -523,7 +523,7 @@ Yes, narrowly. The LLM should not guess scheduling behavior. Runtime code should
 
 ## Recommended Copy-Paste Instruction For Claude Code
 
-Implement a disciplined resilience harness for `backend.chat` based on `case_studies/2026-05-19-disciplined-resilience-harness-plan.md`.
+Implement a disciplined resilience harness for `backend.chat` based on `backend/case_studies/2026-05-19-disciplined-resilience-harness-plan.md`.
 
 Scope:
 

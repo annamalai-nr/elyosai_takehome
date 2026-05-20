@@ -63,6 +63,10 @@ _archive/
 # Take-home prompt (do not redistribute)
 Elyos Interview 2.0.pdf
 
+# Agent-tooling docs (private to the author's workflow)
+AGENTS.md
+CLAUDE.md
+
 # For the time being
 api_reconnaissance/
 api_reconnaissance_known_things/

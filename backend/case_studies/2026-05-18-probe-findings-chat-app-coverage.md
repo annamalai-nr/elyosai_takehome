@@ -54,11 +54,11 @@ Primary probe scripts:
 
 Generated probe reports:
 
-- `probe_reports/weather_probe_report.html`
-- `probe_reports/weather_cancellation_report.html`
-- `probe_reports/research_probe_report.html`
-- `probe_reports/research_cancellation_report.html`
-- `probe_reports/shared_rate_limit_bucket_report.html`
+- `api_analysis/_archive/weather_probe_report.html`
+- `api_analysis/_archive/weather_cancellation_report.html`
+- `api_analysis/_archive/research_probe_report.html`
+- `api_analysis/_archive/research_cancellation_report.html`
+- `api_analysis/_archive/shared_rate_limit_bucket_report.html`
 
 Current chat-app implementation areas:
 
