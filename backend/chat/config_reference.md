@@ -1,21 +1,22 @@
 # Config Reference — `config.yaml`
 
-## API-level rate limit (`elyos_api.rate_limit`)
-
-One shared budget for the whole Elyos API — both weather and research
-draw from the same pool (confirmed by controlled probe).
+## API-level settings (`elyos_api`)
 
 | Field | Type | Example | Purpose |
 |-------|------|---------|---------|
-| `max_requests_per_window` | int | `5` | How many calls the server allows per window. The 6th call within ~30s gets throttled. |
-| `window_s` | number | `30` | The server's rate-limit sliding window in seconds. |
+| `base_url` | string | `"https://..."` | Elyos API base URL. |
+| `api_key_env` | string | `"ELYOS_API_KEY"` | Name of the env var holding the API key. |
 | `max_throttle_retries` | int | `2` | How many times to retry after a server throttle response (`{"status": "throttled"}`). |
 
-**How they work together:** The proactive pacer in `tools.pacing.wait_for_budget()`
-tracks timestamps of recent calls in a deque. When
-`len(deque) >= max_requests_per_window`, it sleeps until the oldest timestamp
-is older than `window_s`. On throttle, the client sleeps
-`retry_after_seconds + 1` (no jitter — single-user CLI).
+**How throttle retry works:** When the server returns a throttle response,
+`elyos_client.py` reads the authoritative `retry_after_seconds` from the
+response body, sleeps `retry_after + 1` s, and retries up to
+`max_throttle_retries` times. There is no client-side proactive pacing —
+the server's `retry_after_seconds` is the sole backoff signal.
+
+**Bounded concurrency:** Per-endpoint `max_concurrent` semaphores in
+`agent.py` limit how many HTTP calls can be in-flight simultaneously.
+This is the only client-side rate protection beyond reactive throttle retry.
 
 ---
 

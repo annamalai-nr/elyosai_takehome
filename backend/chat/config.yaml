@@ -4,11 +4,7 @@
 elyos_api:
   base_url: "https://elyos-interview-907656039105.europe-west2.run.app"
   api_key_env: "ELYOS_API_KEY"   # name of the env var that holds the key
-
-  rate_limit:
-    max_requests_per_window: 5
-    window_s: 30
-    max_throttle_retries: 2
+  max_throttle_retries: 2
 
   endpoints:
     weather:

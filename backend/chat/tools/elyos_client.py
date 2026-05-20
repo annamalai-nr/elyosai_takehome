@@ -81,7 +81,7 @@ async def _call_api(
 def _endpoint_args(cfg: dict, endpoint_name: str) -> tuple[str, str, dict, int]:
     api_cfg = cfg["elyos_api"]
     ep_cfg = api_cfg["endpoints"][endpoint_name]
-    max_throttle = api_cfg["rate_limit"]["max_throttle_retries"]
+    max_throttle = api_cfg["max_throttle_retries"]
     return api_cfg["base_url"], os.environ[api_cfg["api_key_env"]], ep_cfg, max_throttle
 
 

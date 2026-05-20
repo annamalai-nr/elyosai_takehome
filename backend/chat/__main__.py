@@ -11,7 +11,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--validate",
         action="store_true",
-        help="Run parser and resilience self-tests and exit.",
+        help="Run parser and history self-tests and exit.",
     )
     return parser
 

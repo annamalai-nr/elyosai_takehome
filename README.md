@@ -32,13 +32,16 @@ Builds a CLI streaming chat application that calls two real-world APIs
 │   ├── weather_<ts>.raw                       sanity-probe raw responses
 │   └── research_<ts>.raw
 │
-├── probe_reports/                     post-execution probe reports
-│   ├── weather_probe_report.html              /weather main probe (32 calls)
-│   ├── weather_cancellation_report.html       /weather cancellation sidecar
-│   ├── research_probe_plan.html               /research pre-execution plan
-│   ├── research_probe_report.html             /research main probe (27 calls)
-│   ├── research_cancellation_report.html      /research cancellation sidecar
-│   └── shared_rate_limit_bucket_report.html   proof that /weather + /research share one rate budget
+├── probe_reports/                     consolidated probe reports
+│   ├── weather_report.html                    /weather findings (all quirks + cancellation)
+│   ├── research_report.html                   /research findings (all quirks + cancellation)
+│   └── _archive/                              raw per-probe reports (superseded)
+│       ├── weather_probe_report.html          /weather main probe (32 calls)
+│       ├── weather_cancellation_report.html   /weather cancellation sidecar
+│       ├── research_probe_report.html         /research main probe (27 calls)
+│       ├── research_cancellation_report.html  /research cancellation sidecar
+│       ├── shared_rate_limit_bucket_report.html  shared rate budget proof
+│       └── probe_plans/research_probe_plan.html  /research pre-execution plan
 │
 ├── case_studies/                      trace-driven debugging write-ups
 │   ├── 2026-05-18-research-api-hallucination.md       root cause + diagnosis
@@ -63,15 +66,13 @@ Builds a CLI streaming chat application that calls two real-world APIs
 │   │   ├── tools/                      tool schemas + execution + Elyos API
 │   │   │   ├── schemas.py             LLM tool schemas
 │   │   │   ├── dispatch.py            tool execution dispatch
-│   │   │   ├── pacing.py              proactive rate-limit pacing + bounded execution
-│   │   │   └── elyos_client.py        raw Elyos HTTP/retry client
+│   │   │   └── elyos_client.py        Elyos HTTP client with throttle/timeout retry
 │   │   ├── llm_client.py              LiteLLM streaming adapter
-│   │   ├── agent.py                   ReAct loop + bounded concurrency + budget pacing
+│   │   ├── agent.py                   ReAct loop with bounded concurrency
 │   │   ├── tests/                     self-tests (--validate)
 │   │   │   ├── runner.py              test runner entry point
 │   │   │   ├── test_history.py         7 history trimming tests
-│   │   │   ├── test_parsers.py        9 parser/envelope behavioral tests
-│   │   │   └── test_resilience.py     4 budget + concurrency tests
+│   │   │   └── test_parsers.py        9 parser/envelope behavioral tests
 │   │   └── interfaces/
 │   │       └── cli_chat.py            interactive REPL + SIGINT handling
 │   ├── llm_utils/                     ported LiteLLM kwargs helpers
@@ -90,7 +91,8 @@ Builds a CLI streaming chat application that calls two real-world APIs
 │       ├── weather/
 │       └── research/
 │
-└── frontend/                          intentionally empty (no UI in take-home)
+└── frontend/
+    └── index.html                     standalone web UI (open in browser)
 ```
 
 ## Setup
@@ -119,10 +121,12 @@ cd /Users/annamalainarayanan/Desktop/personal/interview_prep/elyosai
 
 ## Running the chat app
 
+### CLI
+
 ```bash
 conda activate elyosai
 python -m backend.chat              # interactive streaming chat
-python -m backend.chat --validate   # run 20 parser + resilience + history self-tests
+python -m backend.chat --validate   # run 16 parser + history self-tests
 ```
 
 Config lives at `backend/chat/config.yaml`. Model name, API base URL, and
@@ -134,6 +138,22 @@ supported — set `llm.model_name` in the config to switch providers.
 
 Operational logs go to stderr at INFO level (config load, throttle retries,
 API errors). Set `LOG_LEVEL=DEBUG` in `.env` for per-request tracing.
+
+### Web UI
+
+Open `frontend/index.html` directly in a browser — no build step or server
+required. It is a self-contained HTML/CSS/JS file with a demo simulation of
+the chat interface (weather cards, research cards, rate-limit indicators,
+cancellation handling). To serve it locally:
+
+```bash
+# Option 1: open the file directly
+open frontend/index.html
+
+# Option 2: serve via Python's built-in HTTP server
+python -m http.server 8000 --directory frontend
+# then visit http://localhost:8000
+```
 
 ### LangSmith tracing
 
@@ -186,10 +206,9 @@ Outputs: `backend/outputs/probes/research/` (`.raw` files + `research_probe_log.
 
 ## Where to find findings
 
-Read the HTML reports in `probe_reports/` — one for each endpoint's main
-probe and one for each cancellation sidecar. The `research_probe_plan.html`
-in the same folder is the pre-execution plan that was approved before the
-research probe ran.
+Read the consolidated HTML reports in `probe_reports/` — one per API
+endpoint, covering all quirks and cancellation behaviour. The raw
+per-probe source reports are preserved in `probe_reports/_archive/`.
 
 ## Case studies
 
@@ -202,11 +221,12 @@ coverage audits:
   and GOOD/BAD few-shot example.
 - **Probe-to-runtime coverage** (`2026-05-18-probe-findings-chat-app-coverage.md`):
   Cross-references all probe findings against the chat app implementation.
-- **Resilience harness** (`2026-05-19-disciplined-resilience-harness-plan.md`):
-  Policy document for bounded concurrency, proactive budget pacing, timeout
-  retry, and config-driven resilience.
-- **Post-harness reconciliation** (`2026-05-19-post-refactor-coverage-audit.md`):
-  Final coverage audit after the resilience harness was implemented.
+- **Resilience harness (historical)** (`2026-05-19-disciplined-resilience-harness-plan.md`):
+  Original policy document that included proactive budget pacing. The proactive
+  pacer was later removed; the current architecture uses only bounded concurrency
+  and reactive throttle retry.
+- **Post-harness reconciliation (historical)** (`2026-05-19-post-refactor-coverage-audit.md`):
+  Coverage audit after the original resilience harness. Predates the pacer removal.
 
 ## Take-home phases
 
@@ -232,6 +252,7 @@ coverage audits:
 - **Mind the throttle.** Both `/weather` and `/research` return throttling as
   HTTP 200 with a `{"status":"throttled","retry_after_seconds":N,...}` body.
   A controlled probe confirmed they share a single server-side rate budget
-  (see `probe_reports/shared_rate_limit_bucket_report.html`). The chat app
-  uses one API-level `rate_limit` block with proactive budget pacing and
-  bounded concurrency to stay within limits. **Cancelled calls still consume a slot.**
+  (see `probe_reports/_archive/shared_rate_limit_bucket_report.html`). The
+  chat app relies on the server's authoritative `retry_after_seconds` for
+  backoff and uses bounded concurrency (per-endpoint semaphores) to limit
+  parallel requests. **Cancelled calls still consume a throttle slot.**

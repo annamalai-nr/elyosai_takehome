@@ -46,7 +46,7 @@ async def _async_main() -> None:
     print(f"Elyos Chat (model: {cfg['llm']['model_name']})")
     print("Type 'quit' to exit.\n")
 
-    session_state: dict = {"partial": "", "rate_budgets": {}, "rate_budget_locks": {}}
+    session_state: dict = {"partial": ""}
 
     async with httpx.AsyncClient() as http_client:
         loop = asyncio.get_running_loop()

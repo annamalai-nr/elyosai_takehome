@@ -1,1 +1,1 @@
-"""Parser and resilience self-tests (run via --validate)."""
+"""Parser and history self-tests (run via --validate)."""

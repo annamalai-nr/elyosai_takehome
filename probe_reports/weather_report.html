@@ -582,13 +582,13 @@
       <td>Throttle is HTTP&nbsp;200, not 429</td>
       <td><span class="badge badge-major">Major</span></td>
       <td>
-        <code>elyos_client.py</code> inspects every 200 response body for <code>"status":&nbsp;"throttled"</code>
-        (line&nbsp;68). When detected, it parses <code>retry_after_seconds</code> via <code>_retry_after()</code>,
+        <code>elyos_client.py</code> inspects every 200 response body for <code>"status":&nbsp;"throttled"</code>.
+        When detected, it reads the server&rsquo;s authoritative <code>retry_after_seconds</code>,
         sleeps <code>retry_after + 1</code>&nbsp;s, and retries up to <code>max_throttle_retries</code> (2) times.
         The user sees <em>"Rate-limited, retrying in Ns&hellip;"</em> on the CLI. If retries are exhausted,
         a <code>throttle_exhausted</code> error dict is returned and the LLM explains the failure.
-        Proactive pacing in <code>pacing.py</code> also prevents most throttles by tracking a client-side
-        sliding window (<code>wait_for_budget</code>) and delaying calls before they hit the server limit.
+        Bounded concurrency (<code>max_concurrent</code> semaphores in <code>agent.py</code>) limits
+        parallel in-flight calls to reduce throttle likelihood.
       </td>
       <td>
         Server returns <code>{"status":"throttled","retry_after_seconds":29,"data":null}</code>.
@@ -653,16 +653,15 @@
       <td>Cancelled calls consume a throttle slot</td>
       <td><span class="badge badge-major">Major</span></td>
       <td>
-        Two layers of handling. First, <code>cli_chat.py</code> warns the user on cancellation:
+        <code>cli_chat.py</code> warns the user on cancellation:
         <em>"Cancelled. The interrupted API call may still count against the rate limit."</em>
-        Second, the client-side pacing budget (<code>pacing.py</code>) remains accurate because
-        <code>wait_for_budget</code> records the timestamp <em>before</em> the HTTP call begins.
-        If the call is cancelled mid-flight, the slot is already consumed in the client-side
-        budget, matching the server's behaviour.
+        The server counts the cancelled request against its rate budget regardless of whether
+        the client received a response. The reactive throttle retry in <code>elyos_client.py</code>
+        handles any subsequent throttle responses using the server&rsquo;s <code>retry_after_seconds</code>.
       </td>
       <td>
         User presses Ctrl+C during a weather lookup. The CLI prints the cancellation warning.
-        <em>The pacing budget already counted that slot, so the next call correctly waits if the window is at capacity &mdash; no double-count, no wasted slot.</em>
+        <em>If the next request triggers a throttle, the client sleeps for the server-specified retry period and retries.</em>
       </td>
     </tr>
     <tr>
@@ -670,16 +669,16 @@
       <td>Shared rate-limit bucket with /research</td>
       <td><span class="badge badge-major">Major</span></td>
       <td>
-        <code>pacing.py</code> uses a single shared budget key (<code>"api"</code>) for all endpoints.
-        Both <code>get_weather</code> and <code>research_topic</code> pass through the same
-        <code>wait_for_budget</code> with one deque and one lock. The <code>config.yaml</code>
-        rate-limit block is at the API level, not per-endpoint. This mirrors the server's shared
-        bucket and prevents weather calls from starving research calls (or vice versa).
+        Both <code>/weather</code> and <code>/research</code> share a single server-side rate budget
+        (~5 requests per 30&nbsp;s window). The <code>config.yaml</code> <code>max_throttle_retries</code>
+        is at the API level, not per-endpoint, reflecting this shared budget.
+        Bounded concurrency (<code>max_concurrent</code> semaphores) limits parallel calls,
+        and the reactive throttle retry in <code>elyos_client.py</code> handles any throttle
+        responses using the server&rsquo;s authoritative <code>retry_after_seconds</code>.
       </td>
       <td>
-        If 4 weather calls have been made in the current window, <code>wait_for_budget</code>
-        knows only 1 slot remains.
-        <em>The next call &mdash; whether weather or research &mdash; is allowed through. A 6th call of either type is delayed until the window slides.</em>
+        5 weather calls exhaust the shared budget. The next research call gets throttled.
+        <em>The client sleeps for the server-specified retry period and retries successfully.</em>
       </td>
     </tr>
     <tr>

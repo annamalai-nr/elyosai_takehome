@@ -7,13 +7,21 @@ import httpx
 from langsmith import traceable
 
 from backend.chat.llm_client import stream_llm_turn
-from backend.chat.tools.pacing import bounded_execute
+from backend.chat.models import ToolCall
+from backend.chat.tools.dispatch import execute_tool_call
 
 log = logging.getLogger(__name__)
 
 MAX_TOOL_ROUNDS: int = 5
 
 _TOOL_ENDPOINT = {"get_weather": "weather", "research_topic": "research"}
+
+
+async def _execute_with_semaphore(
+    sem: asyncio.Semaphore, client: httpx.AsyncClient, cfg: dict, tool_call: ToolCall
+) -> dict:
+    async with sem:
+        return await execute_tool_call(client, cfg, tool_call)
 
 
 @traceable(run_type="chain", name="chat_turn")
@@ -45,7 +53,7 @@ async def stream_turn(
                 sems[ep] = asyncio.Semaphore(endpoints[ep]["max_concurrent"])
 
         observations = await asyncio.gather(*[
-            bounded_execute(sems[ep], client, cfg, state, tc)
+            _execute_with_semaphore(sems[ep], client, cfg, tc)
             for ep, tc in pairs
         ])
         messages.extend(observations)
