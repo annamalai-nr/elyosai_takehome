@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Elyos AI — Take-Home Assessment</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;0,6..72,700;1,6..72,400&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+<style>
+  :root {
+    --bg: #faf9f6;
+    --surface: #ffffff;
+    --ink: #1c1917;
+    --ink-secondary: #57534e;
+    --ink-muted: #78716c;
+    --border: #e7e5e4;
+    --border-strong: #d6d3d1;
+    --accent: #b45309;
+    --accent-soft: #fef3c7;
+    --accent-border: #f59e0b;
+    --major: #991b1b;
+    --major-bg: #fef2f2;
+    --major-border: #fca5a5;
+    --minor: #4338ca;
+    --minor-bg: #eef2ff;
+    --minor-border: #a5b4fc;
+    --green: #166534;
+    --green-bg: #f0fdf4;
+    --green-border: #86efac;
+    --code-bg: #f5f5f4;
+    --pre-bg: #1c1917;
+    --pre-text: #e7e5e4;
+    --pre-key: #fbbf24;
+    --pre-str: #86efac;
+    --heading-font: 'Newsreader', Georgia, serif;
+    --body-font: 'Outfit', system-ui, sans-serif;
+    --mono-font: 'JetBrains Mono', 'Cascadia Code', monospace;
+    --shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(28, 25, 23, 0.07), 0 2px 4px -2px rgba(28, 25, 23, 0.05);
+    --shadow-lg: 0 10px 15px -3px rgba(28, 25, 23, 0.08), 0 4px 6px -4px rgba(28, 25, 23, 0.04);
+  }
+
+  /* ── Reveal core overrides ── */
+  .reveal-viewport { background: var(--bg); }
+  .reveal { font-family: var(--body-font); font-weight: 400; color: var(--ink); font-size: 24px; }
+  .reveal .slides { text-align: left; }
+  .reveal .slides section { padding: 1.8em 3em; }
+  .reveal .slide-background { background: var(--bg); }
+
+  .reveal h1, .reveal h2, .reveal h3 {
+    font-family: var(--heading-font);
+    color: var(--ink);
+    text-transform: none;
+    letter-spacing: normal;
+    text-shadow: none;
+  }
+  .reveal h1 { font-weight: 700; font-size: 2.4em; line-height: 1.12; margin-bottom: 0.2em; }
+  .reveal h2 { font-weight: 600; font-size: 1.5em; line-height: 1.2; margin-bottom: 0.4em; }
+  .reveal h3 { font-weight: 600; font-size: 1.05em; margin-bottom: 0.3em; }
+  .reveal p { font-size: 0.92em; line-height: 1.55; color: var(--ink-secondary); }
+  .reveal p strong { color: var(--ink); }
+  .reveal ul { list-style: none; padding: 0; margin: 0; }
+  .reveal li { font-size: 0.88em; line-height: 1.5; color: var(--ink-secondary); padding-left: 1.2em; position: relative; margin-bottom: 0.3em; }
+  .reveal li::before { content: ''; position: absolute; left: 0; top: 0.5em; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+  .reveal li strong { color: var(--ink); }
+  .reveal code {
+    font-family: var(--mono-font); font-size: 0.85em; background: var(--code-bg);
+    color: var(--ink); padding: 0.12em 0.4em; border-radius: 4px; border: 1px solid var(--border);
+  }
+
+  /* ── Fragment animation ── */
+  .reveal .fragment { transition: all 0.35s ease; }
+  .reveal .fragment.fade-up { transform: translateY(15px); }
+  .reveal .fragment.fade-up.visible { transform: translateY(0); }
+
+  /* ── Shared components ── */
+  .overline {
+    font-family: var(--mono-font); font-size: 0.65em; font-weight: 500;
+    color: var(--accent); letter-spacing: 0.12em; text-transform: uppercase;
+    margin-bottom: 0.6em; display: block;
+  }
+  .badge {
+    display: inline-block; font-family: var(--body-font); font-size: 0.72em; font-weight: 600;
+    letter-spacing: 0.05em; text-transform: uppercase; padding: 0.2em 0.6em;
+    border-radius: 4px; vertical-align: middle;
+  }
+  .badge-major { background: var(--major-bg); color: var(--major); border: 1px solid var(--major-border); }
+  .badge-accent { background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent-border); }
+  .badge-green { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+  .badge-muted { background: var(--code-bg); color: var(--ink-muted); border: 1px solid var(--border); }
+
+  .callout {
+    background: var(--accent-soft); border-left: 4px solid var(--accent-border);
+    border-radius: 0 8px 8px 0; padding: 0.9em 1.3em; margin: 0.8em 0;
+  }
+  .callout p { font-size: 0.88em; color: var(--ink-secondary); margin: 0; line-height: 1.5; }
+  .callout strong { color: var(--accent); }
+
+  .quote-block {
+    font-family: var(--heading-font); font-style: italic;
+    font-size: 1.2em; line-height: 1.4; color: var(--ink);
+    border-left: 3px solid var(--accent); padding-left: 1em;
+    margin: 0.8em 0;
+  }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1em 1.2em; box-shadow: var(--shadow-sm);
+  }
+  .card-accent { border-color: var(--accent-border); border-width: 2px; }
+
+  /* ── Code block (dark) ── */
+  .code-dark {
+    font-family: var(--mono-font); font-size: 0.8em; line-height: 1.6;
+    background: var(--pre-bg); color: var(--pre-text); padding: 1em 1.3em;
+    border-radius: 8px; box-shadow: var(--shadow-md); margin: 0.6em 0;
+    overflow: hidden;
+  }
+  .code-dark .kw { color: #c084fc; }
+  .code-dark .fn { color: #fbbf24; }
+  .code-dark .str { color: #86efac; }
+  .code-dark .cm { color: #78716c; }
+  .code-dark .op { color: #94a3b8; }
+
+  /* ══════════════════════════════════════════ */
+  /*   SLIDE 1: TITLE                           */
+  /* ══════════════════════════════════════════ */
+  .slide-title {
+    display: flex !important; flex-direction: column;
+    justify-content: center; align-items: center; text-align: center;
+  }
+  .slide-title h1 { font-size: 2.8em; margin-bottom: 0.1em; }
+  .slide-title .subtitle {
+    font-family: var(--heading-font); font-style: italic;
+    font-size: 1.2em; color: var(--ink-muted); margin-bottom: 1.4em;
+  }
+  .slide-title .divider { width: 60px; height: 2px; background: var(--accent); margin: 0 auto 1.2em; }
+  .slide-title .author { font-size: 0.95em; font-weight: 500; color: var(--ink-secondary); margin-bottom: 1.5em; }
+
+  .title-hooks {
+    display: flex; gap: 1.5em; margin-top: 0.3em;
+  }
+  .title-hook {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 0.8em 1.4em; box-shadow: var(--shadow-md); text-align: center;
+    min-width: 210px;
+  }
+  .title-hook .hook-example {
+    font-family: var(--mono-font); font-size: 0.75em; color: var(--accent);
+    margin-bottom: 0.35em; display: block;
+  }
+  .title-hook .hook-label { font-size: 0.8em; color: var(--ink-muted); }
+
+  /* ══════════════════════════════════════════ */
+  /*   SLIDE 2: APPROACH                        */
+  /* ══════════════════════════════════════════ */
+  .approach-flow { display: flex; align-items: stretch; gap: 0; margin: 0.8em 0 1em; }
+  .approach-step {
+    flex: 1; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 0.9em 1em; box-shadow: var(--shadow-sm);
+  }
+  .approach-step .step-num {
+    font-family: var(--mono-font); font-size: 0.6em; font-weight: 500;
+    color: var(--surface); background: var(--accent); letter-spacing: 0.08em;
+    text-transform: uppercase; display: inline-block;
+    padding: 0.15em 0.5em; border-radius: 3px; margin-bottom: 0.4em;
+  }
+  .approach-step h3 { font-size: 1.05em; margin-bottom: 0.25em; }
+  .approach-step p { font-size: 0.78em; color: var(--ink-muted); line-height: 1.4; margin: 0; }
+  .approach-step .step-examples {
+    margin-top: 0.4em; padding-top: 0.4em; border-top: 1px solid var(--border);
+  }
+  .approach-step .step-examples span {
+    display: block; font-family: var(--mono-font); font-size: 0.65em;
+    color: var(--ink-muted); line-height: 1.45;
+  }
+  .approach-arrow { display: flex; align-items: center; padding: 0 0.4em; font-size: 1.4em; color: var(--accent); }
+
+  .stats-bar {
+    display: flex; gap: 2.5em; padding: 0.6em 0; border-top: 1px solid var(--border);
+  }
+  .stat-value {
+    font-family: var(--heading-font); font-size: 1.8em; font-weight: 700;
+    color: var(--ink); line-height: 1.2; display: block;
+  }
+  .stat-label { font-size: 0.7em; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+  /* ══════════════════════════════════════════ */
+  /*   SLIDE 3: ARCHITECTURE (SVG)              */
+  /* ══════════════════════════════════════════ */
+  .arch-container { display: flex; justify-content: center; margin-top: 0.5em; }
+  .arch-container svg text { font-family: var(--body-font); }
+  .arch-container svg .mono { font-family: var(--mono-font); }
+
+  /* ══════════════════════════════════════════ */
+  /*   SLIDES 4-5: TRADE-OFFS                   */
+  /* ══════════════════════════════════════════ */
+  .tradeoff-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.3em; margin: 0.7em 0 0.7em; }
+  .tradeoff-col {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1.1em 1.3em; box-shadow: var(--shadow-sm);
+  }
+  .tradeoff-col.chosen { border-color: var(--accent-border); border-width: 2px; box-shadow: var(--shadow-md); }
+  .tradeoff-col h3 { font-size: 1em; margin-bottom: 0.4em; }
+  .tradeoff-col p { font-size: 0.82em; margin-bottom: 0.3em; }
+  .tradeoff-col ul { margin-top: 0.2em; }
+  .tradeoff-col li { font-size: 0.82em; margin-bottom: 0.2em; }
+  .tradeoff-col li::before { width: 5px; height: 5px; top: 0.45em; }
+  .tradeoff-col .col-verdict {
+    margin-top: 0.5em; padding-top: 0.5em; border-top: 1px solid var(--border);
+    font-size: 0.78em; color: var(--ink-muted); font-style: italic;
+  }
+
+  .tradeoff-bottom {
+    background: var(--code-bg); border-radius: 8px; padding: 0.7em 1.1em;
+  }
+  .tradeoff-bottom p { font-size: 0.85em; color: var(--ink-secondary); margin: 0; line-height: 1.45; }
+  .tradeoff-bottom strong { color: var(--ink); }
+
+  /* ══════════════════════════════════════════ */
+  /*   SLIDE 6: META-HARNESS                    */
+  /* ══════════════════════════════════════════ */
+  .meta-flow { display: flex; align-items: stretch; gap: 0; margin: 1em 0 1.2em; }
+  .meta-step {
+    flex: 1; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 0.7em 0.8em; text-align: center; box-shadow: var(--shadow-sm);
+  }
+  .meta-step h3 { font-size: 0.95em; margin-bottom: 0.2em; }
+  .meta-step p { font-size: 0.75em; color: var(--ink-muted); margin: 0; line-height: 1.35; }
+  .meta-arrow { display: flex; align-items: center; padding: 0 0.35em; font-size: 1.3em; color: var(--accent); }
+
+  .closing-footer {
+    margin-top: 1.5em; padding-top: 1em; border-top: 1px solid var(--border);
+    text-align: center;
+  }
+  .closing-footer p { font-size: 0.88em; color: var(--ink-muted); }
+  .closing-footer .cta {
+    font-family: var(--heading-font); font-style: italic;
+    font-size: 1.1em; color: var(--ink-secondary); margin-top: 0.6em;
+  }
+</style>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- SLIDE 1: TITLE                                          -->
+<!-- ════════════════════════════════════════════════════════ -->
+<section class="slide-title">
+  <span class="overline">Take-Home Assessment</span>
+  <h1>Elyos AI</h1>
+  <div class="subtitle">Streaming Chat with Quirky APIs</div>
+  <div class="divider"></div>
+  <div class="author">Annamalai Narayanan</div>
+
+  <div class="title-hooks fragment fade-up">
+    <div class="title-hook">
+      <span class="hook-example">Mars &rarr; Marseille</span>
+      <span class="hook-label">Silent fuzzy matching</span>
+    </div>
+    <div class="title-hook">
+      <span class="hook-example">HTTP 200 { status: "throttled" }</span>
+      <span class="hook-label">Hidden rate limit</span>
+    </div>
+    <div class="title-hook">
+      <span class="hook-example">Atlantis &rarr; 22&deg;C, Partly cloudy</span>
+      <span class="hook-label">Fabricated weather</span>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- SLIDE 2: APPROACH                                       -->
+<!-- ════════════════════════════════════════════════════════ -->
+<section>
+  <span class="overline">Thesis</span>
+  <h2>Turning the Problem on Its Head</h2>
+
+  <div class="quote-block fragment fade-up">
+    The chat app is not the discovery mechanism.<br>
+    It is the demonstration layer for the policies derived from the API investigation.
+  </div>
+
+  <div class="approach-flow">
+    <div class="approach-step fragment fade-up">
+      <div class="step-num">Step 1</div>
+      <h3>Probe</h3>
+      <p>Structured probes via Claude Code: normal inputs, malformed inputs, fuzzy locations, concurrency, rate&nbsp;limits, cancellation.</p>
+      <div class="step-examples">
+        <span>&#x2192; Mars silently resolves to Marseille</span>
+        <span>&#x2192; Atlantis returns plausible weather</span>
+        <span>&#x2192; Rate limits return HTTP 200</span>
+      </div>
+    </div>
+    <div class="approach-arrow fragment fade-up">&rarr;</div>
+    <div class="approach-step fragment fade-up">
+      <div class="step-num">Step 2</div>
+      <h3>Derive Policies</h3>
+      <p>Classify 16&nbsp;quirks. Decide: code-level handling, prompt-level handling, or concurrency&nbsp;model.</p>
+      <div class="step-examples">
+        <span>&#x2192; Body-inspect every HTTP 200</span>
+        <span>&#x2192; Normalise Shape A/B into one model</span>
+        <span>&#x2192; Bound concurrency via semaphore</span>
+      </div>
+    </div>
+    <div class="approach-arrow fragment fade-up">&rarr;</div>
+    <div class="approach-step fragment fade-up">
+      <div class="step-num">Step 3</div>
+      <h3>Implement</h3>
+      <p>Build the chat app as the demonstration layer for the policies.</p>
+      <div class="step-examples">
+        <span>&#x2192; ReAct agent loop, 5 rounds max</span>
+        <span>&#x2192; Dedicated parsers per endpoint</span>
+        <span>&#x2192; Untrusted envelope for all tool data</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="stats-bar fragment fade-up">
+    <div><span class="stat-value">59</span><span class="stat-label">Probes</span></div>
+    <div><span class="stat-value">76</span><span class="stat-label">API Calls</span></div>
+    <div><span class="stat-value">16</span><span class="stat-label">Quirks</span></div>
+    <div><span class="stat-value">10</span><span class="stat-label">Major</span></div>
+    <div><span class="stat-value">6</span><span class="stat-label">Minor</span></div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- SLIDE 3: ARCHITECTURE (SVG)                             -->
+<!-- ════════════════════════════════════════════════════════ -->
+<section>
+  <span class="overline">Code Walkthrough</span>
+  <h2>Architecture</h2>
+
+  <div class="arch-container">
+    <svg viewBox="0 0 820 500" width="820" height="500" xmlns="http://www.w3.org/2000/svg">
+      <!-- Definitions -->
+      <defs>
+        <marker id="arrow" viewBox="0 0 6 6" refX="6" refY="3" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M 0 0 L 6 3 L 0 6 Z" fill="#b45309"/>
+        </marker>
+        <filter id="boxShadow" x="-5%" y="-5%" width="110%" height="115%">
+          <feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.06"/>
+        </filter>
+      </defs>
+
+      <!-- User Input -->
+      <rect x="310" y="5" width="200" height="42" rx="8" fill="#fff" stroke="#e7e5e4" filter="url(#boxShadow)"/>
+      <text x="410" y="31" text-anchor="middle" font-size="15" font-weight="500" fill="#1c1917">User Input</text>
+
+      <!-- Arrow down -->
+      <line x1="410" y1="47" x2="410" y2="66" stroke="#b45309" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+      <!-- Interface -->
+      <rect x="270" y="70" width="280" height="48" rx="8" fill="#fff" stroke="#e7e5e4" filter="url(#boxShadow)"/>
+      <text x="410" y="91" text-anchor="middle" font-size="15" font-weight="500" fill="#1c1917">Interface</text>
+      <text x="410" y="109" text-anchor="middle" font-size="12" fill="#b45309" class="mono">__main__.py &mdash; CLI / WebSocket</text>
+
+      <!-- Arrow down -->
+      <line x1="410" y1="118" x2="410" y2="134" stroke="#b45309" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+      <!-- Agent Loop boundary -->
+      <rect x="40" y="138" width="740" height="295" rx="12" fill="rgba(254,243,199,0.2)" stroke="#f59e0b" stroke-width="2" stroke-dasharray="6,4"/>
+      <text x="60" y="160" font-size="13" font-weight="500" fill="#b45309" class="mono" letter-spacing="0.5">AGENT LOOP &mdash; ReAct &times; 5 ROUNDS &mdash; agent.py</text>
+
+      <!-- LLM Client box (left) -->
+      <rect x="70" y="175" width="250" height="115" rx="8" fill="#fff" stroke="#e7e5e4" filter="url(#boxShadow)"/>
+      <text x="195" y="199" text-anchor="middle" font-size="15" font-weight="500" fill="#1c1917">LLM Client</text>
+      <text x="195" y="217" text-anchor="middle" font-size="12" fill="#b45309" class="mono">llm_client.py</text>
+      <line x1="100" y1="228" x2="290" y2="228" stroke="#e7e5e4"/>
+      <text x="195" y="247" text-anchor="middle" font-size="12" fill="#78716c">Streaming via LiteLLM</text>
+      <text x="195" y="264" text-anchor="middle" font-size="12" fill="#78716c">Tool-call delta assembly</text>
+      <text x="195" y="281" text-anchor="middle" font-size="12" fill="#78716c">Incremental token delivery</text>
+
+      <!-- Arrows between LLM and Tool pipeline -->
+      <line x1="320" y1="205" x2="460" y2="205" stroke="#b45309" stroke-width="1.5" marker-end="url(#arrow)"/>
+      <text x="390" y="198" text-anchor="middle" font-size="11" fill="#78716c">tool calls</text>
+
+      <line x1="460" y1="265" x2="320" y2="265" stroke="#b45309" stroke-width="1.5" marker-end="url(#arrow)"/>
+      <text x="390" y="258" text-anchor="middle" font-size="11" fill="#78716c">observations</text>
+
+      <!-- Tool Dispatch -->
+      <rect x="470" y="175" width="280" height="42" rx="8" fill="#fff" stroke="#e7e5e4" filter="url(#boxShadow)"/>
+      <text x="610" y="196" text-anchor="middle" font-size="14" font-weight="500" fill="#1c1917">Tool Dispatch</text>
+      <text x="610" y="211" text-anchor="middle" font-size="11" fill="#b45309" class="mono">dispatch.py</text>
+
+      <!-- Arrow down -->
+      <line x1="610" y1="217" x2="610" y2="231" stroke="#b45309" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+      <!-- HTTP Client -->
+      <rect x="470" y="234" width="280" height="42" rx="8" fill="#fff" stroke="#e7e5e4" filter="url(#boxShadow)"/>
+      <text x="610" y="255" text-anchor="middle" font-size="14" font-weight="500" fill="#1c1917">HTTP Client</text>
+      <text x="610" y="270" text-anchor="middle" font-size="11" fill="#b45309" class="mono">elyos_client.py &mdash; throttle retry, cancel</text>
+
+      <!-- Arrow down -->
+      <line x1="610" y1="276" x2="610" y2="290" stroke="#b45309" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+      <!-- Parsers -->
+      <rect x="470" y="293" width="280" height="42" rx="8" fill="#fff" stroke="#e7e5e4" filter="url(#boxShadow)"/>
+      <text x="610" y="314" text-anchor="middle" font-size="14" font-weight="500" fill="#1c1917">Parsers</text>
+      <text x="610" y="329" text-anchor="middle" font-size="11" fill="#b45309" class="mono">weather.py / research.py</text>
+
+      <!-- Arrow down -->
+      <line x1="610" y1="335" x2="610" y2="349" stroke="#b45309" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+      <!-- Envelope -->
+      <rect x="470" y="352" width="280" height="42" rx="8" fill="#fff" stroke="#f59e0b" stroke-width="2" filter="url(#boxShadow)"/>
+      <text x="610" y="373" text-anchor="middle" font-size="14" font-weight="500" fill="#1c1917">Untrusted Envelope</text>
+      <text x="610" y="388" text-anchor="middle" font-size="11" fill="#b45309" class="mono">{source: elyos_api, untrusted: true}</text>
+
+      <!-- Concurrency badge -->
+      <rect x="70" y="305" width="250" height="60" rx="8" fill="#fff" stroke="#e7e5e4" filter="url(#boxShadow)"/>
+      <text x="195" y="328" text-anchor="middle" font-size="13" font-weight="500" fill="#1c1917">Bounded Concurrency</text>
+      <text x="195" y="346" text-anchor="middle" font-size="11" fill="#78716c" class="mono">asyncio.Semaphore per endpoint</text>
+      <text x="195" y="360" text-anchor="middle" font-size="11" fill="#78716c" class="mono">max_concurrent = 1</text>
+
+      <!-- Arrow from agent loop to response -->
+      <line x1="410" y1="433" x2="410" y2="450" stroke="#b45309" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+      <!-- Streamed Response -->
+      <rect x="310" y="453" width="200" height="42" rx="8" fill="#fff" stroke="#e7e5e4" filter="url(#boxShadow)"/>
+      <text x="410" y="479" text-anchor="middle" font-size="15" font-weight="500" fill="#1c1917">Streamed Response</text>
+    </svg>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- SLIDE 4: TRADE-OFF 1 — CODE vs PROMPT                  -->
+<!-- ════════════════════════════════════════════════════════ -->
+<section>
+  <span class="overline">Trade-offs</span>
+  <h2>Code vs Prompt Responsibility</h2>
+  <p>Where each quirk is handled depends on whether detection is deterministic.</p>
+
+  <div class="tradeoff-grid">
+    <div class="tradeoff-col chosen fragment fade-up">
+      <span class="badge badge-green">Code &mdash; Deterministic</span>
+      <h3>Reliable signal in the response</h3>
+      <ul>
+        <li><strong>Shape A/B</strong> &mdash; <code>temperature_c</code> vs <code>conditions</code></li>
+        <li><strong>Location mismatch</strong> &mdash; requested &ne; returned</li>
+        <li><strong>Cached data</strong> &mdash; <code>cached: true</code></li>
+        <li><strong>Timeout</strong> &mdash; <code>if not data</code> (empty <code>{}</code>)</li>
+        <li><strong>Throttle</strong> &mdash; <code>status: "throttled"</code> in body</li>
+      </ul>
+      <div class="col-verdict">Parsers catch it &rarr; deterministic &rarr; never wrong</div>
+    </div>
+
+    <div class="tradeoff-col fragment fade-up">
+      <span class="badge badge-accent">Prompt &mdash; Judgment</span>
+      <h3>No programmatic signal</h3>
+      <ul>
+        <li><strong>Fabrication</strong> &mdash; Atlantis returns valid-looking data</li>
+        <li>Same shape, same fields, no error flag</li>
+        <li>Detection requires world knowledge</li>
+      </ul>
+      <div style="margin-top: 0.6em; padding-top: 0.5em; border-top: 1px solid var(--border);">
+        <p style="font-size: 0.78em; color: var(--ink-muted); margin: 0;">
+          <strong style="color: var(--ink-secondary);">Alternatives ruled out:</strong><br>
+          Geocoder lookup &rarr; adds latency + external dependency<br>
+          Hardcoded blocklist &rarr; always incomplete
+        </p>
+      </div>
+      <div class="col-verdict">LLM uses general knowledge &rarr; less deterministic &rarr; but never blocks a valid request</div>
+    </div>
+  </div>
+
+  <div class="tradeoff-bottom fragment fade-up">
+    <p><strong>Trade-off:</strong> Prompt-level handling may miscaveat an obscure but real place. But it keeps the harness focused on what it can detect reliably, and avoids blocking legitimate requests for unusual locations.</p>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- SLIDE 5: TRADE-OFF 2 — REACTIVE vs PROACTIVE            -->
+<!-- ════════════════════════════════════════════════════════ -->
+<section>
+  <span class="overline">Trade-offs</span>
+  <h2>Reactive Retry vs Proactive Pacing</h2>
+  <p>Shared rate-limit bucket: ~5 calls / 30s across both endpoints.</p>
+
+  <div class="tradeoff-grid">
+    <div class="tradeoff-col fragment fade-up">
+      <span class="badge badge-muted">Considered</span>
+      <h3>Proactive Pacer</h3>
+      <ul>
+        <li>Track call timestamps</li>
+        <li>Space requests evenly across window</li>
+        <li>Stay under budget preemptively</li>
+      </ul>
+      <div class="col-verdict" style="color: var(--major);">
+        Requires knowing exact window size and call budget &mdash; neither documented. If wrong, burns calls and gets throttled anyway.
+      </div>
+    </div>
+
+    <div class="tradeoff-col chosen fragment fade-up">
+      <span class="badge badge-green">Chosen</span>
+      <h3>Bounded Concurrency + Reactive Retry</h3>
+      <ul>
+        <li><code>asyncio.Semaphore</code> per endpoint</li>
+        <li><code>max_concurrent = 1</code> &mdash; serialise same-endpoint calls</li>
+        <li>On throttle: read <code>retry_after_seconds</code>, wait, retry</li>
+        <li>Server stays the source of truth</li>
+      </ul>
+      <div class="col-verdict">Does not prevent throttles &mdash; responds to them. Multi-city requests run sequentially.</div>
+    </div>
+  </div>
+
+  <div class="callout fragment fade-up">
+    <p><strong>Key insight:</strong> "I chose to be honest about what I don't know rather than pretend I do."</p>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- SLIDE 6: META-HARNESS + CLOSING                         -->
+<!-- ════════════════════════════════════════════════════════ -->
+<section>
+  <span class="overline">Self-Critique</span>
+  <h2>The Meta-Harness</h2>
+  <p>The probe &rarr; catalogue &rarr; policy &rarr; implement workflow is automatable &mdash; and directly relevant to Elyos.</p>
+
+  <div class="meta-flow fragment fade-up">
+    <div class="meta-step">
+      <h3>API Endpoint</h3>
+      <p>Given any external API</p>
+    </div>
+    <div class="meta-arrow">&rarr;</div>
+    <div class="meta-step">
+      <h3>Probe</h3>
+      <p>Generate &amp; run reconnaissance probes</p>
+    </div>
+    <div class="meta-arrow">&rarr;</div>
+    <div class="meta-step">
+      <h3>Catalogue</h3>
+      <p>Capture failure modes &amp; inconsistencies</p>
+    </div>
+    <div class="meta-arrow">&rarr;</div>
+    <div class="meta-step" style="border-color: var(--accent-border); border-width: 2px;">
+      <h3>Policy</h3>
+      <p>Engineering decisions for the app</p>
+    </div>
+  </div>
+
+  <div class="callout fragment fade-up">
+    <p><strong>The real value is in the policy generation step:</strong> turning "the API returns empty <code>{}</code> after 15s" into "classify empty responses as timeout, surface to the user, suggest retry." That is where the engineering judgment lives.</p>
+  </div>
+
+  <div class="quote-block fragment fade-up" style="margin-top: 1em;">
+    This is what I would want to dogfood at Elyos &mdash; a reusable harness for discovering and handling API quirks at scale.
+  </div>
+
+  <div class="closing-footer fragment fade-up">
+    <p>AI-first workflow &middot; Claude Code throughout &middot; Full session transcripts included</p>
+    <p class="cta">Happy to dig into any of this during the on-site.</p>
+  </div>
+</section>
+
+</div><!-- .slides -->
+</div><!-- .reveal -->
+
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<script>
+  Reveal.initialize({
+    hash: true,
+    controls: false,
+    progress: false,
+    center: true,
+    width: 1280,
+    height: 720,
+    margin: 0.04,
+    transition: 'fade',
+    transitionSpeed: 'fast',
+  });
+</script>
+</body>
+</html>
