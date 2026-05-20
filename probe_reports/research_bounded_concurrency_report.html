@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>/research — Bounded Concurrency Report</title>
+<title>Bounded Concurrency — Design Rationale</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;0,6..72,700;1,6..72,400&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -300,12 +300,13 @@
 
 <!-- ════════════════════════════════════════════════ HEADER ═══ -->
 <header class="report-header">
-  <div class="endpoint">/research endpoint</div>
-  <h1>Bounded Concurrency Report</h1>
+  <div class="endpoint">design rationale</div>
+  <h1>Bounded Concurrency</h1>
   <p class="subtitle">
-    How the chat app limits simultaneous <code>/research</code> calls
-    and what that does — and does not — protect against.
-    Based on probe data and the current implementation in
+    A design essay (not a probe finding) explaining how the chat app
+    limits simultaneous in-flight calls to <code>/weather</code> and
+    <code>/research</code>, what that does and does not protect against,
+    and the trade-off vs. proactive pacing. References
     <code>agent.py</code>, <code>elyos_client.py</code>, and
     <code>parsers/research.py</code>.
   </p>
@@ -315,15 +316,23 @@
 <h2>TL;DR</h2>
 
 <p>
-  The chat app uses an <code>asyncio.Semaphore(1)</code> for <code>/research</code>,
-  meaning at most <strong>one</strong> research call is in flight at a time per LLM turn.
-  This is <strong>bounded concurrency, not pacing</strong>.
-  It does not track or reserve server rate-limit slots.
-  It prevents research-on-research burst contention but accepts that
-  the shared API budget may already be partially consumed by <code>/weather</code> calls.
+  The chat app uses an <code>asyncio.Semaphore(1)</code> for <strong>both</strong>
+  <code>/weather</code> and <code>/research</code>, meaning at most one call
+  to each endpoint is in flight at a time per LLM turn. Cross-endpoint calls
+  (one weather + one research) can still overlap. This is
+  <strong>bounded concurrency, not pacing</strong>: the semaphores limit
+  in-flight count, they do not track or reserve server rate-limit slots.
   When a throttle does occur, the client handles it reactively via
   <code>elyos_client.py</code>'s retry loop.
 </p>
+
+<div class="note">
+  <strong>Note on current values:</strong> With both endpoints at
+  <code>max_concurrent: 1</code>, the per-endpoint semaphore infrastructure
+  in <code>agent.py</code> is mostly inert in practice — only cross-endpoint
+  overlap remains. The infrastructure is kept because the trade-off discussion
+  below applies whenever <code>max_concurrent &gt; 1</code> might be considered.
+</div>
 
 <!-- ════════════════════════════════════════ CURRENT DESIGN ═══ -->
 <h2>Current Design Summary</h2>
@@ -404,17 +413,26 @@
 </div>
 
 <!-- ════════════════════════════════════════ WHY max_concurrent=1 ═══ -->
-<h2>Why <code>/research</code> Uses <code>max_concurrent: 1</code></h2>
+<h2>Why Both Endpoints Use <code>max_concurrent: 1</code></h2>
 
 <p>
-  The <code>/research</code> endpoint is slow: normal calls take roughly 3–8 s,
-  and pathological inputs can trigger a server-side timeout that returns an
-  empty <code>{}</code> body after ~15 s. In probe runs, concurrent research
-  fan-out performed poorly — under 5 parallel calls, some succeeded, one
-  returned <code>{}</code>, and two gave up after exhausting throttle retries.
+  <code>/research</code> is the stronger case: it is slow (~3–8 s on normal
+  calls, ~15 s on the server-side timeout that returns an empty <code>{}</code>
+  body), and probe runs showed concurrent research fan-out performing poorly —
+  under 5 parallel calls, some succeeded, one returned <code>{}</code>, and two
+  gave up after exhausting throttle retries.
+</p>
+<p>
+  <code>/weather</code> is fast (~200 ms per call) and previously ran with
+  <code>max_concurrent: 4</code>. It was rolled back to <code>1</code> after
+  noticing the same shared-budget logic applies: bursting four weather calls
+  at once eats four of the ~5 slots in the 30 s window in well under a second,
+  with no real wall-clock win because the LLM rarely emits more than 2–3 tool
+  calls per round. Serialising both endpoints keeps behaviour predictable and
+  avoids the temptation to interpret "bounded" as "rate-aware."
 </p>
 
-<p>Serialising research calls avoids several failure modes:</p>
+<p>Serialising calls within an endpoint avoids several failure modes:</p>
 
 <ul>
   <li><strong>Competing retries.</strong> If two parallel research calls both hit
@@ -611,20 +629,32 @@
 <!-- ── Scenario D ── -->
 <div class="scenario">
   <div class="scenario-label">Scenario D</div>
-  <h4>User cancels a research call mid-flight (Ctrl+C)</h4>
+  <h4>User cancels a research call mid-flight</h4>
 
-  <p>The user presses Ctrl+C while a research call is in flight at ~2 s into a ~6 s call.</p>
+  <p>
+    The user interrupts at ~2 s into a ~6 s research call. Two transports
+    support this:
+  </p>
+  <ul>
+    <li><strong>CLI:</strong> the user presses Ctrl+C; <code>cli_chat.py</code>
+        catches SIGINT and cancels the turn task.</li>
+    <li><strong>Web UI:</strong> the user presses the cancel button; the
+        frontend sends <code>{"type":"cancel"}</code> over the WebSocket
+        and <code>ws_server.py</code> cancels the turn task.</li>
+  </ul>
 
   <div class="timeline">
     <span class="t-muted">t=0s</span>  research call fires<br>
-    <span class="t-muted">t=2s</span>  <span class="t-fail">user presses Ctrl+C</span> → asyncio.CancelledError<br>
-    <span class="t-muted">    </span>  cli_chat.py cancels the turn task<br>
+    <span class="t-muted">t=2s</span>  <span class="t-fail">user cancels</span> → asyncio.CancelledError<br>
+    <span class="t-muted">    </span>  the turn task is cancelled<br>
     <span class="t-muted">    </span>  semaphore is released (async with exits)<br>
     <span class="t-muted">    </span>  <span class="t-warn">but the server already received and counted the request</span>
   </div>
   <p class="summary-line">
     <strong>The rate-limit slot is consumed regardless of cancellation.</strong>
     <code>cli_chat.py</code> warns: "The interrupted API call may still count against the rate limit."
+    The web UI marks the partial response as interrupted and emits a
+    <code>cancelled</code> event followed by <code>done</code>.
     If the user's next message triggers another research call and the budget is tight,
     <code>elyos_client.py</code>'s throttle retry handles the reactive recovery.
   </p>
@@ -702,7 +732,7 @@
     <tr>
       <td><strong>Bounded concurrency</strong></td>
       <td>Limits simultaneous in-flight calls per endpoint</td>
-      <td><code>max_concurrent: 1</code> (research), <code>4</code> (weather)</td>
+      <td><code>max_concurrent: 1</code> (both endpoints)</td>
     </tr>
     <tr>
       <td><strong>Throttle retry</strong></td>
@@ -731,10 +761,11 @@
 <div class="footer">
   <p>
     <strong>Code references:</strong>
-    <code>agent.py</code> (semaphore creation, lines 38–45),
-    <code>elyos_client.py</code> (throttle retry, lines 68–78; timeout retry, lines 43–51),
-    <code>parsers/research.py</code> (empty body detection, line 31; cache detection, line 45),
-    <code>cli_chat.py</code> (cancellation warning, line 82),
+    <code>agent.py</code> (semaphore creation and <code>_bounded_execute</code>),
+    <code>elyos_client.py</code> (throttle retry and timeout retry),
+    <code>parsers/research.py</code> (empty-body / cache detection),
+    <code>cli_chat.py</code> (SIGINT cancellation warning),
+    <code>interfaces/ws_server.py</code> (WebSocket cancel protocol),
     <code>config.yaml</code> (endpoint configuration).
   </p>
 </div>
