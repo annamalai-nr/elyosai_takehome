@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>/weather — Consolidated Probe Report</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 900px; margin: 2em auto; line-height: 1.6; color: #222; }
+  h1 { border-bottom: 2px solid #333; padding-bottom: 0.3em; }
+  h2 { margin-top: 2em; border-bottom: 1px solid #ccc; padding-bottom: 0.2em; }
+  h3 { margin-top: 1.5em; }
+  table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+  th, td { border: 1px solid #ccc; padding: 0.4em 0.8em; text-align: left; font-size: 0.9em; }
+  th { background: #f5f5f5; }
+  code { background: #f0f0f0; padding: 0.15em 0.3em; border-radius: 3px; font-size: 0.9em; }
+  pre { background: #f5f5f5; padding: 1em; overflow-x: auto; border-radius: 4px; }
+  .finding { background: #fffde7; border-left: 3px solid #f9a825; padding: 0.5em 1em; margin: 1em 0; }
+  .note { background: #e8f5e9; border-left: 3px solid #43a047; padding: 0.5em 1em; margin: 1em 0; }
+</style>
+</head>
+<body>
+
+<h1>/weather &mdash; Consolidated Probe Report</h1>
+<p>
+  Consolidates findings from <code>weather_probe_report.html</code> (32 probes, 2026-05-17),
+  <code>weather_cancellation_report.html</code> (10 calls, 2026-05-17), and the shared-bucket
+  findings from <code>shared_rate_limit_bucket_report.html</code> (2026-05-19).
+  Originals archived in <code>_archive/</code>.
+</p>
+
+<h2>TL;DR</h2>
+<ol>
+  <li><strong>Rate limit is HTTP 200 with body envelope, not 429.</strong> After ~5 successful calls per ~30&nbsp;s window, the response is <code>{"status":"throttled","retry_after_seconds":N,"data":null}</code>.</li>
+  <li><strong>Two success schemas; both must be handled.</strong> Shape&nbsp;A (flat: <code>temperature_c</code>, <code>condition</code>, <code>humidity</code>) and Shape&nbsp;B (multi-observation <code>conditions</code> array). Either can appear for any city on any call.</li>
+  <li><strong>Fuzzy matching and fabrication.</strong> Mars&rarr;Marseille, &#x4eac;&#x90fd;&rarr;&#x4eac;&#x90fd;&#x5e02;, Atlantis&rarr;fabricated weather. No way to detect mismatch from response alone.</li>
+  <li><strong>Cancelled calls still consume a throttle slot.</strong> Server processes the request immediately; client cancellation frees nothing.</li>
+  <li><strong>Shared rate-limit bucket.</strong> /weather and /research share the same ~5-per-30&nbsp;s window (confirmed by interleaved probes).</li>
+</ol>
+
+<h2>Response Variants (7 observed)</h2>
+<table>
+  <tr><th>Variant</th><th>Status</th><th>Example</th><th>Trigger</th></tr>
+  <tr><td>A &mdash; Flat single</td><td>200</td><td><code>{location:"London", temperature_c:14.0, condition:"Partly cloudy", humidity:67}</code></td><td>Most real-city queries</td></tr>
+  <tr><td>B &mdash; Multi-observation</td><td>200</td><td><code>{location:"Paris", conditions:[...], note:"Multiple conditions..."}</code></td><td>~10&ndash;15% of successful calls, random</td></tr>
+  <tr><td>Throttle envelope</td><td>200</td><td><code>{status:"throttled", retry_after_seconds:29, data:null}</code></td><td>After 5 successful calls per ~30&nbsp;s</td></tr>
+  <tr><td>404 not found</td><td>404</td><td><code>{error:"Location \"\" not found"}</code></td><td>Empty location or very long input (5000 chars)</td></tr>
+  <tr><td>422 validation</td><td>422</td><td>FastAPI default envelope</td><td>Missing or wrong param name</td></tr>
+  <tr><td>401 unauthorised</td><td>401</td><td><code>{error:"Invalid or missing API key"}</code></td><td>No key or wrong key</td></tr>
+  <tr><td>405 method not allowed</td><td>405</td><td><code>{detail:"Method Not Allowed"}</code></td><td>OPTIONS request</td></tr>
+</table>
+
+<h2>Schema Variation (Shape A vs Shape B)</h2>
+<p>Both shapes can appear for any city on any call &mdash; not city-locked. Shape&nbsp;B carries two conflicting observations with mixed condition casing ("Overcast" vs "light rain").</p>
+<h3>Shape A (flat)</h3>
+<pre>{
+  "location": "London",
+  "temperature_c": 14.0,
+  "condition": "Partly cloudy",
+  "humidity": 67
+}</pre>
+<h3>Shape B (multi-observation)</h3>
+<pre>{
+  "location": "Paris",
+  "conditions": [
+    {"temperature_c": 12.5, "condition": "Overcast", "humidity": 82},
+    {"temperature_c": 11.8, "condition": "light rain", "humidity": 90}
+  ],
+  "note": "Multiple conditions reported for this location"
+}</pre>
+
+<h2>Throttle Behaviour</h2>
+<ul>
+  <li>~5 successful 200s per ~30&nbsp;s sliding window, then 6th returns throttle envelope.</li>
+  <li><code>retry_after_seconds</code> starts at ~29 and decrements as wall-clock time passes within the window.</li>
+  <li>Error responses (401/404/405/422) never replaced by throttle envelopes &mdash; error path short-circuits.</li>
+  <li>After sleeping <code>retry_after_seconds + 1</code>, the same call succeeds. Confirmed across 6 backoff retries: 0 calls gave up.</li>
+</ul>
+
+<h2>Shared Rate-Limit Bucket</h2>
+<div class="finding">
+  <strong>Both /weather and /research share the same ~5-per-30&nbsp;s bucket.</strong>
+  Confirmed by interleaved probes: 5 /weather calls exhausted the budget, and the
+  next /research call was immediately throttled. Conversely, 4 /weather + 1 /research
+  consumed all 5 slots, and the next /weather was throttled.
+</div>
+
+<h2>Fuzzy Matching &amp; Fabrication</h2>
+<table>
+  <tr><th>Input</th><th>Returned Location</th><th>Notes</th></tr>
+  <tr><td>Mars</td><td>Marseille</td><td>Fuzzy match</td></tr>
+  <tr><td>&#x4eac;&#x90fd;</td><td>&#x4eac;&#x90fd;&#x5e02;</td><td>Unicode fuzzy match</td></tr>
+  <tr><td>Atlantis</td><td>Atlantis</td><td>Fabricated weather for fictional city</td></tr>
+</table>
+
+<h2>Input Handling</h2>
+<table>
+  <tr><th>Input</th><th>Behaviour</th></tr>
+  <tr><td>Empty string</td><td>404</td></tr>
+  <tr><td>5000 chars</td><td>404 with full input echoed</td></tr>
+  <tr><td>LONDON / london</td><td>Normalised to "London" (case folded)</td></tr>
+  <tr><td>"&nbsp;&nbsp;London&nbsp;&nbsp;"</td><td>Whitespace stripped</td></tr>
+  <tr><td>"London, UK"</td><td>Comma suffix ignored &rarr; London</td></tr>
+  <tr><td>Extra param (foo=bar)</td><td>Ignored</td></tr>
+  <tr><td>Duplicate param</td><td>Last value wins</td></tr>
+  <tr><td>Missing param</td><td>422</td></tr>
+</table>
+
+<h2>Cancellation Findings</h2>
+<div class="finding">
+  <strong>Cancelled call still costs a throttle slot.</strong> Server processes request on arrival;
+  client-side cancellation (ReadTimeout at 50&nbsp;ms or <code>asyncio.task.cancel()</code>) does not free anything.
+</div>
+<ul>
+  <li><code>asyncio.CancelledError</code> raised cleanly &mdash; no zombie tasks, no leaks.</li>
+  <li><code>httpx.AsyncClient</code> pool survives cancellation &mdash; same client usable for next request.</li>
+  <li>Aggressive caching: 4 consecutive London calls returned bit-identical bodies.</li>
+</ul>
+
+<h2>Concurrency</h2>
+<ul>
+  <li>5 parallel calls to <code>/weather?location=London</code>: 3 succeeded immediately, 2 throttled, retried after 30&nbsp;s, all 5 ultimately succeeded.</li>
+  <li>Confirms true server-side parallelism; concurrent fan-out consumes slots.</li>
+  <li>All 5 returned bit-identical bodies.</li>
+</ul>
+
+<h2>Latency Profile</h2>
+<table>
+  <tr><th>Call type</th><th>Range</th><th>Notes</th></tr>
+  <tr><td>Cold start</td><td>~3.1 s</td><td>Cloud Run cold start</td></tr>
+  <tr><td>Warm valid</td><td>0.107&ndash;0.170 s</td><td>p50 &asymp; 0.12 s</td></tr>
+  <tr><td>Concurrent (5 parallel)</td><td>0.148&ndash;0.203 s</td><td>Slightly elevated</td></tr>
+  <tr><td>Error responses</td><td>0.033&ndash;0.037 s</td><td>Skip weather generation</td></tr>
+  <tr><td>Throttled</td><td>~0.04 s</td><td>Plus backoff wait</td></tr>
+</table>
+
+<h2>Prompt Injection</h2>
+<p>No prompt-injection content found in any of 32 response bodies.</p>
+
+<h2>Errors</h2>
+<ul>
+  <li>401 (auth), 404 (empty/non-resolvable), 422 (missing param), 405 (non-GET) &mdash; all well-shaped and reliable.</li>
+  <li>Error responses are ~3&times; faster (~30&ndash;40&nbsp;ms) than valid responses.</li>
+  <li>All bypass throttle budget.</li>
+</ul>
+
+<h2>Source Data</h2>
+<p>
+  42 API calls total (32 main probes + 10 cancellation probes).
+  Raw logs: <code>backend/outputs/probes/weather/weather_probe_log.jsonl</code>.
+  Original reports archived in <code>_archive/</code>.
+</p>
+
+</body>
+</html>
