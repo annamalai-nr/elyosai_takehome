@@ -13,8 +13,12 @@ from backend.chat.tools.elyos_client import get_weather, research_topic
 log = logging.getLogger(__name__)
 
 
+def _dump(parsed) -> dict:
+    return parsed.model_dump(exclude_none=True) if hasattr(parsed, "model_dump") else parsed
+
+
 @traceable(run_type="tool", name="execute_tool")
-async def execute_tool_call(client: httpx.AsyncClient, cfg: dict, call: ToolCall) -> dict:
+async def execute_tool_call(client: httpx.AsyncClient, cfg: dict, call: ToolCall, emit=None) -> dict:
     """Execute a single tool call and return an OpenAI-format tool message."""
     try:
         args = json.loads(call.arguments)
@@ -29,16 +33,28 @@ async def execute_tool_call(client: httpx.AsyncClient, cfg: dict, call: ToolCall
     if call.name == "get_weather":
         location = args.get("location", "")
         log.debug("Executing get_weather(location=%s)", location)
-        print(f"\r  Looking up weather for {location}...", flush=True)
+        if emit:
+            await emit({"type": "status", "message": f"Looking up weather for {location}..."})
+        else:
+            print(f"\r  Looking up weather for {location}...", flush=True)
         data = await get_weather(client, cfg, location)
-        content = envelope(call.name, normalise_weather(data, location))
+        parsed = normalise_weather(data, location)
+        if emit:
+            await emit({"type": "tool_result", "name": "get_weather", "data": _dump(parsed)})
+        content = envelope(call.name, parsed)
 
     elif call.name == "research_topic":
         topic = args.get("topic", "")
         log.debug("Executing research_topic(topic=%s)", topic[:50])
-        print(f"\r  Researching {topic}... (Ctrl+C to cancel)", flush=True)
+        if emit:
+            await emit({"type": "status", "message": f"Researching {topic}..."})
+        else:
+            print(f"\r  Researching {topic}... (Ctrl+C to cancel)", flush=True)
         data = await research_topic(client, cfg, topic)
-        content = envelope(call.name, parse_research(data))
+        parsed = parse_research(data)
+        if emit:
+            await emit({"type": "tool_result", "name": "research_topic", "data": _dump(parsed)})
+        content = envelope(call.name, parsed)
 
     else:
         log.warning("Unknown tool requested: %s", call.name)

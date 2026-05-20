@@ -1266,10 +1266,78 @@ function escapeHtml(s) {
   return div.innerHTML;
 }
 
-// ── Demo Simulation ──
-async function sendMessage() {
+// ── WebSocket Connection ──
+const WS_URL = 'ws://localhost:8765';
+let ws = null;
+let currentBubble = null;
+let currentText = '';
+
+function connectWs() {
+  ws = new WebSocket(WS_URL);
+  ws.onopen = () => {
+    statusText.textContent = 'Connected';
+    statusPill.classList.remove('rate-limited');
+  };
+  ws.onclose = () => {
+    statusText.textContent = 'Disconnected';
+    setTimeout(connectWs, 3000);
+  };
+  ws.onerror = () => { statusText.textContent = 'Connection error'; };
+  ws.onmessage = (e) => handleEvent(JSON.parse(e.data));
+}
+
+function handleEvent(ev) {
+  switch (ev.type) {
+    case 'text':
+      if (!currentBubble) {
+        removeStreamingIndicator();
+        currentBubble = document.createElement('div');
+        currentBubble.className = 'message assistant';
+        currentBubble.innerHTML = '<div class="bubble"></div>';
+        messagesEl.appendChild(currentBubble);
+        currentText = '';
+      }
+      currentText += ev.content;
+      currentBubble.querySelector('.bubble').textContent = currentText;
+      scrollToBottom();
+      break;
+    case 'tool_start':
+      removeStreamingIndicator();
+      currentBubble = null;
+      addStreamingIndicator('Calling ' + ev.name + '...');
+      break;
+    case 'status':
+      removeStreamingIndicator();
+      addStreamingIndicator(ev.message);
+      break;
+    case 'tool_result':
+      removeStreamingIndicator();
+      addToolCards([{ name: ev.name, data: ev.data }]);
+      break;
+    case 'error':
+      removeStreamingIndicator();
+      currentBubble = null;
+      addAssistantMessage('<p style="color:var(--accent-error)">' + escapeHtml(ev.message) + '</p>');
+      break;
+    case 'cancelled':
+      removeStreamingIndicator();
+      if (currentBubble) {
+        currentBubble.classList.add('interrupted');
+        currentBubble.querySelector('.bubble').innerHTML += '<div class="interrupted-badge">&#9632; Interrupted</div>';
+      }
+      break;
+    case 'done':
+      removeStreamingIndicator();
+      finishStreaming();
+      currentBubble = null;
+      currentText = '';
+      break;
+  }
+}
+
+function sendMessage() {
   const text = inputEl.value.trim();
-  if (!text || state.isStreaming) return;
+  if (!text || state.isStreaming || !ws || ws.readyState !== 1) return;
 
   showMessages();
   addUserMessage(text);
@@ -1278,150 +1346,20 @@ async function sendMessage() {
   state.isStreaming = true;
   sendBtn.disabled = true;
   statusText.textContent = 'Thinking...';
+  addStreamingIndicator('Thinking');
 
-  // Simulate tool calls based on input
-  const isWeather = /weather|temperature|forecast/i.test(text);
-  const isResearch = /research|topic|solar|climate|quantum/i.test(text);
-  const isCancel = /cancel|interrupt/i.test(text);
-  const isError = /error|timeout|fail/i.test(text);
-
-  await sleep(400);
-
-  if (isWeather || (!isResearch && !isCancel && !isError)) {
-    removeStreamingIndicator();
-    const ind = addStreamingIndicator('Calling get_weather...');
-    await sleep(800);
-    removeStreamingIndicator();
-
-    const city = extractCity(text) || 'London';
-    const isMars = city.toLowerCase() === 'mars';
-    const isAtlantis = city.toLowerCase() === 'atlantis';
-    const isMulti = Math.random() < 0.2;
-
-    const weatherData = {
-      requested_location: city,
-      returned_location: isMars ? 'Marseille' : (isAtlantis ? 'Atlantis' : capitalise(city)),
-      observations: isMulti ? [
-        { temp_c: 14.2, condition: 'Partly cloudy', humidity: 67 },
-        { temp_c: 13.1, condition: 'light rain', humidity: 82 }
-      ] : [
-        { temp_c: (Math.random() * 25 + 5).toFixed(1), condition: randomCondition(), humidity: Math.floor(Math.random() * 60 + 30) }
-      ],
-      note: isMulti ? 'Multiple conditions reported' : null
-    };
-    addToolCards([{ name: 'get_weather', data: weatherData }]);
-    await sleep(300);
-  }
-
-  if (isResearch) {
-    removeStreamingIndicator();
-    const ind = addStreamingIndicator('Calling research_topic...');
-    await sleep(2000);
-    removeStreamingIndicator();
-
-    const topic = extractTopic(text) || 'solar energy';
-    const isCached = /climate/i.test(topic);
-
-    const researchData = {
-      kind: isCached ? 'cached' : 'fresh',
-      topic: topic,
-      summary: `Research summary for '${topic}'. This analysis covers key aspects and recent developments in the field.`,
-      sources: ['nature.com', 'sciencedirect.com', 'arxiv.org'],
-      generated_at: isCached ? '2024-03-15T09:00:00Z' : new Date().toISOString(),
-      cache_age: isCached ? '~1 year' : null,
-      cache_age_seconds: isCached ? 26784000 : null
-    };
-    addToolCards([{ name: 'research_topic', data: researchData }]);
-    await sleep(300);
-  }
-
-  if (isError) {
-    removeStreamingIndicator();
-    addStreamingIndicator('Calling research_topic...');
-    await sleep(1500);
-    removeStreamingIndicator();
-
-    addToolCards([{
-      name: 'research_topic',
-      data: { kind: 'timeout', topic: 'complex query', message: 'Research timed out. Try a more specific topic or try again.' }
-    }]);
-    await sleep(200);
-    showRateLimit(5);
-  }
-
-  if (isCancel) {
-    removeStreamingIndicator();
-    addStreamingIndicator('Calling research_topic...');
-    await sleep(1200);
-    removeStreamingIndicator();
-    addAssistantMessage('<p>I was looking into that topic, but the request was</p>', true);
-    finishStreaming();
-    return;
-  }
-
-  // Final assistant reply
-  removeStreamingIndicator();
-  addStreamingIndicator('Composing response...');
-  await sleep(600);
-  removeStreamingIndicator();
-
-  let reply = generateReply(text, isWeather, isResearch);
-  addAssistantMessage(reply);
-  finishStreaming();
+  ws.send(JSON.stringify({ content: text }));
 }
 
 function finishStreaming() {
   state.isStreaming = false;
   sendBtn.disabled = false;
-  statusText.textContent = 'Ready';
+  statusText.textContent = 'Connected';
   inputEl.focus();
 }
 
-function generateReply(text, isWeather, isResearch) {
-  if (isWeather && isResearch) {
-    return '<p>I\'ve retrieved both the weather data and research summary above. The weather data shows current conditions, and the research provides an overview of the topic with sources from the research API.</p>';
-  }
-  if (isWeather) {
-    return '<p>Here\'s the current weather data from the Elyos API. The conditions are shown in the card above. Note that the API may fuzzy-match location names, so always check that the returned location matches what you asked for.</p>';
-  }
-  if (isResearch) {
-    return '<p>I\'ve pulled the research summary from the Elyos API. You can see the sources and freshness status in the card above. If the data is cached, it may not reflect the most recent developments.</p>';
-  }
-  return '<p>I can help you with weather lookups and research queries. Try asking about the weather in a specific city, or ask me to research a topic.</p>';
-}
-
-function extractCity(text) {
-  const m = text.match(/(?:weather\s+(?:in|for|at)\s+)([A-Za-z\s,]+)/i) ||
-            text.match(/(?:in|for)\s+([A-Za-z\s,]+?)(?:\?|$|and\b)/i);
-  return m ? m[1].trim().replace(/[?,.]$/, '') : null;
-}
-
-function extractTopic(text) {
-  const m = text.match(/research\s+(?:about\s+|on\s+)?(.+?)(?:\?|$)/i) ||
-            text.match(/(?:topic|about)\s+(.+?)(?:\?|$)/i);
-  return m ? m[1].trim().replace(/[?,.]$/, '') : null;
-}
-
-function capitalise(s) {
-  return s.replace(/\b\w/g, c => c.toUpperCase());
-}
-
-function randomCondition() {
-  return ['Partly cloudy', 'Sunny', 'Clear', 'Overcast', 'Mist', 'light rain'][Math.floor(Math.random() * 6)];
-}
-
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-
-// ── Demo: add trim indicator on 6th message ──
-let messageCount = 0;
-const origAddUser = addUserMessage;
-addUserMessage = function(text) {
-  messageCount++;
-  if (messageCount === 4) addTrimIndicator();
-  origAddUser(text);
-};
-
 // ── Init ──
+connectWs();
 inputEl.focus();
 </script>
 

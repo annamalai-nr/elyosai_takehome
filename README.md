@@ -36,10 +36,11 @@ Builds a CLI streaming chat application that calls two real-world APIs
 │   │   ├── test_history.py            7 history trimming tests
 │   │   └── test_parsers.py            9 parser/envelope behavioral tests
 │   └── interfaces/
-│       └── cli_chat.py                interactive REPL + SIGINT handling
+│       ├── cli_chat.py                interactive REPL + SIGINT handling
+│       └── ws_server.py               WebSocket server for the web UI
 │
 └── frontend/
-    └── index.html                     standalone web UI (open in browser)
+    └── index.html                     web UI (connects to backend via WebSocket)
 ```
 
 ## Setup
@@ -72,7 +73,8 @@ cd /Users/annamalainarayanan/Desktop/personal/interview_prep/elyosai
 
 ```bash
 conda activate elyosai
-python -m backend.chat              # interactive streaming chat
+python -m backend.chat              # interactive streaming chat (CLI)
+python -m backend.chat --serve      # start WebSocket server for the web UI
 python -m backend.chat --validate   # run 16 parser + history self-tests
 ```
 
@@ -88,19 +90,20 @@ API errors). Set `LOG_LEVEL=DEBUG` in `.env` for per-request tracing.
 
 ### Web UI
 
-Open `frontend/index.html` directly in a browser — no build step or server
-required. It is a self-contained HTML/CSS/JS file with a demo simulation of
-the chat interface (weather cards, research cards, rate-limit indicators,
-cancellation handling). To serve it locally:
+The web frontend connects to the backend via WebSocket. Start the server
+first, then open the HTML file:
 
 ```bash
-# Option 1: open the file directly
-open frontend/index.html
+# 1. Start the WebSocket server (ws://localhost:8765)
+python -m backend.chat --serve
 
-# Option 2: serve via Python's built-in HTTP server
+# 2. In another terminal, serve the frontend
 python -m http.server 8000 --directory frontend
 # then visit http://localhost:8000
 ```
+
+The frontend streams LLM text, renders tool-call cards (weather, research),
+and shows connection/rate-limit status — all driven by real backend data.
 
 ### LangSmith tracing
 

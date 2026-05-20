@@ -26,6 +26,7 @@ dependencies = [
     "langchain-litellm",
     "pydantic",
     "pydantic-settings",
+    "websockets",
 ]
 
 [project.optional-dependencies]

@@ -13,6 +13,11 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Run parser and history self-tests and exit.",
     )
+    parser.add_argument(
+        "--serve",
+        action="store_true",
+        help="Start WebSocket server for the web UI (ws://localhost:8765).",
+    )
     return parser
 
 
@@ -23,6 +28,10 @@ def main(argv: list[str] | None = None) -> None:
         from backend.chat.tests.runner import run_all
 
         run_all()
+    elif args.serve:
+        from backend.chat.interfaces.ws_server import main as ws_main
+
+        ws_main()
     else:
         from backend.chat.interfaces.cli_chat import main as cli_main
 
