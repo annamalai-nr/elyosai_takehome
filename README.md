@@ -32,13 +32,16 @@ Builds a CLI streaming chat application that calls two real-world APIs
 │   ├── weather_<ts>.raw                       sanity-probe raw responses
 │   └── research_<ts>.raw
 │
-├── probe_reports/                     post-execution probe reports
-│   ├── weather_probe_report.html              /weather main probe (32 calls)
-│   ├── weather_cancellation_report.html       /weather cancellation sidecar
-│   ├── research_probe_plan.html               /research pre-execution plan
-│   ├── research_probe_report.html             /research main probe (27 calls)
-│   ├── research_cancellation_report.html      /research cancellation sidecar
-│   └── shared_rate_limit_bucket_report.html   proof that /weather + /research share one rate budget
+├── probe_reports/                     consolidated probe reports
+│   ├── weather_report.html                    /weather findings (all quirks + cancellation)
+│   ├── research_report.html                   /research findings (all quirks + cancellation)
+│   └── _archive/                              raw per-probe reports (superseded)
+│       ├── weather_probe_report.html          /weather main probe (32 calls)
+│       ├── weather_cancellation_report.html   /weather cancellation sidecar
+│       ├── research_probe_report.html         /research main probe (27 calls)
+│       ├── research_cancellation_report.html  /research cancellation sidecar
+│       ├── shared_rate_limit_bucket_report.html  shared rate budget proof
+│       └── probe_plans/research_probe_plan.html  /research pre-execution plan
 │
 ├── case_studies/                      trace-driven debugging write-ups
 │   ├── 2026-05-18-research-api-hallucination.md       root cause + diagnosis
@@ -90,7 +93,8 @@ Builds a CLI streaming chat application that calls two real-world APIs
 │       ├── weather/
 │       └── research/
 │
-└── frontend/                          intentionally empty (no UI in take-home)
+└── frontend/
+    └── index.html                     standalone web UI (open in browser)
 ```
 
 ## Setup
@@ -119,6 +123,8 @@ cd /Users/annamalainarayanan/Desktop/personal/interview_prep/elyosai
 
 ## Running the chat app
 
+### CLI
+
 ```bash
 conda activate elyosai
 python -m backend.chat              # interactive streaming chat
@@ -134,6 +140,22 @@ supported — set `llm.model_name` in the config to switch providers.
 
 Operational logs go to stderr at INFO level (config load, throttle retries,
 API errors). Set `LOG_LEVEL=DEBUG` in `.env` for per-request tracing.
+
+### Web UI
+
+Open `frontend/index.html` directly in a browser — no build step or server
+required. It is a self-contained HTML/CSS/JS file with a demo simulation of
+the chat interface (weather cards, research cards, rate-limit indicators,
+cancellation handling). To serve it locally:
+
+```bash
+# Option 1: open the file directly
+open frontend/index.html
+
+# Option 2: serve via Python's built-in HTTP server
+python -m http.server 8000 --directory frontend
+# then visit http://localhost:8000
+```
 
 ### LangSmith tracing
 
@@ -186,10 +208,9 @@ Outputs: `backend/outputs/probes/research/` (`.raw` files + `research_probe_log.
 
 ## Where to find findings
 
-Read the HTML reports in `probe_reports/` — one for each endpoint's main
-probe and one for each cancellation sidecar. The `research_probe_plan.html`
-in the same folder is the pre-execution plan that was approved before the
-research probe ran.
+Read the consolidated HTML reports in `probe_reports/` — one per API
+endpoint, covering all quirks and cancellation behaviour. The raw
+per-probe source reports are preserved in `probe_reports/_archive/`.
 
 ## Case studies
 
