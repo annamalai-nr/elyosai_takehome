@@ -20,7 +20,7 @@ elyos_api:
 
 llm:
   # Use LiteLLM Python SDK for text chat. Model must be a supported text model from backend/reference_docs/allowed_models.csv.
-  model_name: "gpt-5.5"
+  model_name: "gpt-5.4-mini"
   max_tokens: 8192
   temperature: 1.0
   reasoning_effort: "none"

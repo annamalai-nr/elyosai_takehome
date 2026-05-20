@@ -631,10 +631,10 @@
       <td>Empty {} is HTTP&nbsp;200 hiding a timeout</td>
       <td><span class="badge badge-major">Major</span></td>
       <td>
-        <code>parsers/research.py</code> detects empty response bodies (<code>if not data</code>, line&nbsp;32)
+        <code>parsers/research.py</code> detects empty response bodies (<code>if not data</code>)
         and returns a <code>ResearchResult(kind="timeout")</code> with a user-facing message:
         <em>"Research timed out. Try a more specific topic or try again."</em>
-        The system prompt (<code>prompts.py</code>, research_status_rules) instructs the LLM:
+        The system prompt (<code>prompts.py</code>, <code>&lt;research&gt;</code>) instructs the LLM:
         when research data has <code>kind='timeout'</code>, tell the user and suggest retrying.
       </td>
       <td>
@@ -649,14 +649,16 @@
       <td>
         <code>parsers/research.py</code> detects the <code>cached: true</code> flag and extracts
         <code>cache_age_seconds</code>. The <code>_humanize_seconds()</code> helper converts it to
-        a human-readable age (e.g. <em>"~2 years"</em>) stored in <code>cache_age</code>.
-        The system prompt (<code>prompts.py</code>, research_status_rules) instructs the LLM:
+        a rounded days-only age string stored in <code>cache_age</code>. The original
+        <code>generated_at</code> timestamp is preserved separately and is the most precise
+        staleness signal.
+        The system prompt (<code>prompts.py</code>, <code>&lt;research&gt;</code>) instructs the LLM:
         when <code>kind='cached'</code>, say the result is cached and may be outdated; mention the
-        <code>generated_at</code> timestamp or <code>cache_age</code> for user-facing wording.
+        <code>generated_at</code> timestamp, and treat <code>cache_age</code> as a rough days-only indicator.
       </td>
       <td>
         API returns <code>cached: true</code> with <code>generated_at: "2024-03-15..."</code>.
-        <em>LLM responds: "This research result is cached from ~2 years ago and may be outdated."</em>
+        <em>LLM responds: "This research result is cached, generated at 2024-03-15, and may be outdated."</em>
       </td>
     </tr>
     <tr>
@@ -664,14 +666,16 @@
       <td>Cancelled calls consume a throttle slot</td>
       <td><span class="badge badge-major">Major</span></td>
       <td>
-        Same mechanism as WQ5. <code>cli_chat.py</code> warns the user on cancellation:
+        Same mechanism as WQ5. <code>cli_chat.py</code> warns the user on SIGINT cancellation:
         <em>"Cancelled. The interrupted API call may still count against the rate limit."</em>
+        The WebSocket path supports a <code>{"type":"cancel"}</code> message and emits
+        <code>{"type":"cancelled"}</code> after rolling back the interrupted turn.
         The server counts the cancelled request against its rate budget regardless of whether
         the client received a response. The reactive throttle retry in <code>elyos_client.py</code>
         handles any subsequent throttle responses using the server&rsquo;s <code>retry_after_seconds</code>.
       </td>
       <td>
-        User presses Ctrl+C during a research lookup.
+        User presses Ctrl+C during a research lookup, or the web UI sends a cancel message.
         <em>If the next request triggers a throttle, the client sleeps for the server-specified retry period and retries.</em>
       </td>
     </tr>
@@ -684,7 +688,9 @@
         server-side rate budget (~5 requests per 30&nbsp;s window). The <code>config.yaml</code>
         <code>max_throttle_retries</code> is at the API level, not per-endpoint, reflecting this
         shared budget. Bounded concurrency (<code>max_concurrent</code> semaphores) limits
-        simultaneous in-flight calls, but it does not track the shared server budget.
+        simultaneous in-flight calls. Current config uses <code>weather.max_concurrent: 1</code>
+        and <code>research.max_concurrent: 1</code>, so tool calls are serialised per endpoint.
+        This does not track the shared server budget.
         The reactive throttle retry in <code>elyos_client.py</code> handles throttle responses
         using the server&rsquo;s authoritative <code>retry_after_seconds</code>.
       </td>
@@ -701,7 +707,7 @@
         <code>parsers/research.py</code> detects <code>truncated: true</code> and sets
         <code>kind="truncated"</code>, extracting <code>processed_topic</code> and
         <code>original_topic_length</code> into the model.
-        The system prompt (<code>prompts.py</code>, research_status_rules) instructs the LLM:
+        The system prompt (<code>prompts.py</code>, <code>&lt;research&gt;</code>) instructs the LLM:
         when <code>kind='truncated'</code>, mention the topic was shortened and show the user
         what the API actually used via <code>processed_topic</code>.
       </td>

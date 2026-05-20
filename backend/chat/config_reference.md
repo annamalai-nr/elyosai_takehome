@@ -26,7 +26,7 @@ This is the only client-side rate protection beyond reactive throttle retry.
 |-------|------|---------|---------|
 | `path` | string | `"/weather"` | URL path appended to `base_url`. |
 | `timeout_s` | number | `15` (weather), `20` (research) | HTTP response timeout. |
-| `max_concurrent` | int | `4` (weather), `1` (research) | Max simultaneous in-flight HTTP calls, enforced by an `asyncio.Semaphore`. |
+| `max_concurrent` | int | `1` (weather), `1` (research) | Max simultaneous in-flight HTTP calls, enforced by an `asyncio.Semaphore`. Both endpoints are currently serialized; cross-endpoint calls may still overlap. |
 | `max_timeout_retries` | int | `0` (default), `1` (research) | How many times to retry after a timeout. Optional — defaults to 0 if absent. |
 
 ---

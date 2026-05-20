@@ -40,8 +40,8 @@ tests/
   `{"source": "elyos_api", "untrusted": true, ...}` before entering LLM context.
   A prompt-injection payload was found at the API root endpoint.
 - **Bounded concurrency**: Per-endpoint `asyncio.Semaphore` limits parallel requests
-  (weather: 4 concurrent, research: 1). Both endpoints share a single server-side
-  rate budget.
+  (currently weather: 1, research: 1 — same-endpoint calls are serialized, cross-
+  endpoint calls may overlap). Both endpoints share a single server-side rate budget.
 - **Throttle retry**: The server returns `HTTP 200` with `{"status": "throttled",
   "retry_after_seconds": N}`. The client sleeps for `retry_after_seconds + 1` and
   retries up to `max_throttle_retries` (default 2).

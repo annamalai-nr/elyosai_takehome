@@ -588,7 +588,9 @@
         The user sees <em>"Rate-limited, retrying in Ns&hellip;"</em> on the CLI. If retries are exhausted,
         a <code>throttle_exhausted</code> error dict is returned and the LLM explains the failure.
         Bounded concurrency (<code>max_concurrent</code> semaphores in <code>agent.py</code>) limits
-        simultaneous in-flight calls, but it does not track the shared server budget.
+        simultaneous in-flight calls. In the current config, weather is serialised with
+        <code>weather.max_concurrent: 1</code>. This avoids same-endpoint bursts but does not
+        track the shared server budget &mdash; large batches still hit the throttle wall.
         Throttles are handled reactively using <code>retry_after_seconds</code>.
       </td>
       <td>
@@ -621,7 +623,7 @@
       <td>
         <code>parsers/weather.py</code> captures both <code>requested_location</code> (what the user asked for)
         and <code>returned_location</code> (what the API resolved to) in <code>NormalisedWeather</code>.
-        The system prompt (<code>prompts.py</code>, weather_rules) instructs the LLM: <em>"When
+        The system prompt (<code>prompts.py</code>, <code>&lt;weather&gt;</code>) instructs the LLM: <em>"When
         requested_location and returned_location differ, tell the user about the mismatch."</em>
         This ensures the user knows "Mars" was resolved to "Marseille."
       </td>
@@ -654,14 +656,18 @@
       <td>Cancelled calls consume a throttle slot</td>
       <td><span class="badge badge-major">Major</span></td>
       <td>
-        <code>cli_chat.py</code> warns the user on cancellation:
+        <code>cli_chat.py</code> warns the user on SIGINT cancellation:
         <em>"Cancelled. The interrupted API call may still count against the rate limit."</em>
+        The WebSocket path supports a <code>{"type":"cancel"}</code> message and emits
+        <code>{"type":"cancelled"}</code> after rolling back the interrupted turn.
         The server counts the cancelled request against its rate budget regardless of whether
         the client received a response. The reactive throttle retry in <code>elyos_client.py</code>
         handles any subsequent throttle responses using the server&rsquo;s <code>retry_after_seconds</code>.
       </td>
       <td>
-        User presses Ctrl+C during a weather lookup. The CLI prints the cancellation warning.
+        User presses Ctrl+C during a weather lookup, or the web UI presses the cancel
+        button. The CLI prints the cancellation warning; the web UI marks the partial
+        response as interrupted.
         <em>If the next request triggers a throttle, the client sleeps for the server-specified retry period and retries.</em>
       </td>
     </tr>
@@ -674,7 +680,9 @@
         (~5 requests per 30&nbsp;s window). The <code>config.yaml</code> <code>max_throttle_retries</code>
         is at the API level, not per-endpoint, reflecting this shared budget.
         Bounded concurrency (<code>max_concurrent</code> semaphores) limits simultaneous
-        in-flight calls, but it does not track the shared server budget. The reactive
+        in-flight calls. Current config uses <code>weather.max_concurrent: 1</code> and
+        <code>research.max_concurrent: 1</code>, so tool calls are serialised per endpoint.
+        This does not track the shared server budget. The reactive
         throttle retry in <code>elyos_client.py</code> handles throttle responses using the
         server&rsquo;s authoritative <code>retry_after_seconds</code>.
       </td>
