@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>/research — Bounded Concurrency Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;0,6..72,700;1,6..72,400&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #faf9f6;
+    --surface: #ffffff;
+    --ink: #1c1917;
+    --ink-secondary: #57534e;
+    --ink-muted: #78716c;
+    --border: #e7e5e4;
+    --border-strong: #d6d3d1;
+    --accent: #b45309;
+    --accent-soft: #fef3c7;
+    --accent-border: #f59e0b;
+    --major: #991b1b;
+    --major-bg: #fef2f2;
+    --major-border: #fca5a5;
+    --minor: #4338ca;
+    --minor-bg: #eef2ff;
+    --minor-border: #a5b4fc;
+    --green: #166534;
+    --green-bg: #f0fdf4;
+    --green-border: #86efac;
+    --code-bg: #f5f5f4;
+    --pre-bg: #1c1917;
+    --pre-text: #e7e5e4;
+    --pre-key: #fbbf24;
+    --pre-str: #86efac;
+    --heading-font: 'Newsreader', Georgia, serif;
+    --body-font: 'Outfit', system-ui, sans-serif;
+    --mono-font: 'JetBrains Mono', 'Cascadia Code', monospace;
+    --shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(28, 25, 23, 0.07), 0 2px 4px -2px rgba(28, 25, 23, 0.05);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--body-font);
+    font-weight: 400;
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--ink);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .container {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 3em 2em 6em;
+  }
+
+  /* ── Header ── */
+  .report-header {
+    padding-bottom: 2em;
+    margin-bottom: 2.5em;
+    border-bottom: 1px solid var(--border);
+  }
+  .report-header .endpoint {
+    font-family: var(--mono-font);
+    font-size: 0.8em;
+    font-weight: 500;
+    color: var(--accent);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 0.5em;
+  }
+  .report-header h1 {
+    font-family: var(--heading-font);
+    font-size: 2.4em;
+    font-weight: 700;
+    line-height: 1.15;
+    color: var(--ink);
+    margin-bottom: 0.5em;
+  }
+  .report-header .subtitle {
+    font-size: 0.92em;
+    color: var(--ink-secondary);
+    line-height: 1.65;
+  }
+  .report-header .subtitle code {
+    font-size: 0.88em;
+  }
+
+  /* ── Section headings ── */
+  h2 {
+    font-family: var(--heading-font);
+    font-size: 1.5em;
+    font-weight: 600;
+    color: var(--ink);
+    margin-top: 3em;
+    margin-bottom: 0.75em;
+    padding-bottom: 0.35em;
+    border-bottom: 1px solid var(--border);
+  }
+  h2:first-of-type { margin-top: 0; }
+
+  h3 {
+    font-family: var(--heading-font);
+    font-size: 1.15em;
+    font-weight: 600;
+    color: var(--ink);
+    margin-top: 1.75em;
+    margin-bottom: 0.5em;
+  }
+
+  /* ── Prose ── */
+  p {
+    margin-bottom: 1em;
+    color: var(--ink-secondary);
+  }
+  p strong { color: var(--ink); }
+  li { color: var(--ink-secondary); }
+  li strong { color: var(--ink); }
+
+  ul, ol { margin: 0.75em 0 1.25em 1.5em; }
+  li { margin-bottom: 0.5em; }
+  li + li { margin-top: 0; }
+
+  /* ── Inline code ── */
+  code {
+    font-family: var(--mono-font);
+    font-size: 0.82em;
+    font-weight: 400;
+    background: var(--code-bg);
+    color: var(--ink);
+    padding: 0.15em 0.4em;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+
+  /* ── Code blocks ── */
+  pre {
+    font-family: var(--mono-font);
+    font-size: 0.82em;
+    line-height: 1.65;
+    background: var(--pre-bg);
+    color: var(--pre-text);
+    padding: 1.25em 1.5em;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 1em 0 1.5em;
+    box-shadow: var(--shadow-md);
+  }
+  pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    color: inherit;
+    font-size: inherit;
+  }
+
+  /* ── Tables ── */
+  table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 1em 0 1.5em;
+    background: var(--surface);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    border: none;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  th {
+    font-family: var(--body-font);
+    font-size: 0.78em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-muted);
+    background: var(--bg);
+    padding: 0.75em 1em;
+    text-align: left;
+    border-bottom: 1px solid var(--border-strong);
+  }
+  td {
+    font-size: 0.9em;
+    padding: 0.7em 1em;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: rgba(180, 83, 9, 0.02); }
+
+  /* ── Callout boxes ── */
+  .finding {
+    background: var(--accent-soft);
+    border-left: 4px solid var(--accent-border);
+    padding: 1em 1.25em;
+    margin: 1.25em 0;
+    border-radius: 0 6px 6px 0;
+    font-size: 0.93em;
+  }
+  .finding strong { color: var(--accent); }
+
+  .note {
+    background: var(--green-bg);
+    border-left: 4px solid var(--green-border);
+    padding: 1em 1.25em;
+    margin: 1.25em 0;
+    border-radius: 0 6px 6px 0;
+    font-size: 0.93em;
+  }
+  .note strong { color: var(--green); }
+
+  .warning {
+    background: var(--major-bg);
+    border-left: 4px solid var(--major-border);
+    padding: 1em 1.25em;
+    margin: 1.25em 0;
+    border-radius: 0 6px 6px 0;
+    font-size: 0.93em;
+  }
+  .warning strong { color: var(--major); }
+
+  /* ── Scenario boxes ── */
+  .scenario {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5em;
+    margin: 1.25em 0;
+    box-shadow: var(--shadow-sm);
+  }
+  .scenario h4 {
+    font-family: var(--heading-font);
+    font-size: 1.05em;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 0.75em;
+  }
+  .scenario-label {
+    font-family: var(--mono-font);
+    font-size: 0.72em;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    margin-bottom: 0.25em;
+  }
+  .vs-divider {
+    text-align: center;
+    font-family: var(--body-font);
+    font-weight: 600;
+    font-size: 0.8em;
+    color: var(--ink-muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin: 1em 0;
+  }
+
+  /* ── Timeline ── */
+  .timeline {
+    font-family: var(--mono-font);
+    font-size: 0.78em;
+    line-height: 1.8;
+    background: var(--code-bg);
+    padding: 1em 1.25em;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    margin: 0.5em 0 0.75em;
+    overflow-x: auto;
+  }
+  .timeline .t-ok { color: var(--green); }
+  .timeline .t-warn { color: var(--accent); }
+  .timeline .t-fail { color: var(--major); }
+  .timeline .t-muted { color: var(--ink-muted); }
+
+  .summary-line {
+    font-size: 0.88em;
+    color: var(--ink-secondary);
+    margin-top: 0.5em;
+  }
+  .summary-line strong { color: var(--ink); }
+
+  /* ── Footer ── */
+  .footer {
+    margin-top: 4em;
+    padding-top: 1.5em;
+    border-top: 1px solid var(--border);
+    font-size: 0.82em;
+    color: var(--ink-muted);
+  }
+  .footer code { font-size: 0.9em; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- ════════════════════════════════════════════════ HEADER ═══ -->
+<header class="report-header">
+  <div class="endpoint">/research endpoint</div>
+  <h1>Bounded Concurrency Report</h1>
+  <p class="subtitle">
+    How the chat app limits simultaneous <code>/research</code> calls
+    and what that does — and does not — protect against.
+    Based on probe data and the current implementation in
+    <code>agent.py</code>, <code>elyos_client.py</code>, and
+    <code>parsers/research.py</code>.
+  </p>
+</header>
+
+<!-- ════════════════════════════════════════ TL;DR ═══ -->
+<h2>TL;DR</h2>
+
+<p>
+  The chat app uses an <code>asyncio.Semaphore(1)</code> for <code>/research</code>,
+  meaning at most <strong>one</strong> research call is in flight at a time per LLM turn.
+  This is <strong>bounded concurrency, not pacing</strong>.
+  It does not track or reserve server rate-limit slots.
+  It prevents research-on-research burst contention but accepts that
+  the shared API budget may already be partially consumed by <code>/weather</code> calls.
+  When a throttle does occur, the client handles it reactively via
+  <code>elyos_client.py</code>'s retry loop.
+</p>
+
+<!-- ════════════════════════════════════════ CURRENT DESIGN ═══ -->
+<h2>Current Design Summary</h2>
+
+<table>
+  <thead>
+    <tr><th>Capability</th><th>Present?</th><th>Where</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Bounded concurrency</strong></td>
+      <td>Yes</td>
+      <td><code>agent.py</code> — per-endpoint <code>asyncio.Semaphore</code></td>
+    </tr>
+    <tr>
+      <td><strong>Proactive pacing / local budget tracking</strong></td>
+      <td>No</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td><strong>Reactive throttle retry</strong></td>
+      <td>Yes</td>
+      <td><code>elyos_client.py</code> — sleeps <code>retry_after + 1</code>, up to 2 retries</td>
+    </tr>
+    <tr>
+      <td><strong>Empty <code>{}</code> timeout parsing</strong></td>
+      <td>Yes</td>
+      <td><code>parsers/research.py</code> — converts to <code>ResearchResult(kind="timeout")</code></td>
+    </tr>
+    <tr>
+      <td><strong>Cancellation warning</strong></td>
+      <td>Yes</td>
+      <td><code>cli_chat.py</code> — warns the interrupted call may still count against the rate limit</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ════════════════════════════════════════ CONCURRENCY ≠ PACING ═══ -->
+<h2>Bounded Concurrency Is Not Pacing</h2>
+
+<p>
+  These are two distinct strategies. The chat app implements only the first.
+</p>
+
+<table>
+  <thead>
+    <tr><th></th><th>Bounded Concurrency</th><th>Proactive Pacing</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>What it controls</strong></td>
+      <td>Maximum simultaneous in-flight HTTP calls per endpoint</td>
+      <td>Timing of calls against a local mirror of the server's sliding rate-limit window</td>
+    </tr>
+    <tr>
+      <td><strong>What it knows</strong></td>
+      <td>How many calls are currently running</td>
+      <td>How many rate-limit slots are available right now</td>
+    </tr>
+    <tr>
+      <td><strong>Prevents throttle?</strong></td>
+      <td>Reduces burst pressure, but cannot prevent throttle from budget already consumed by other endpoints</td>
+      <td>Can delay a call until a slot opens, avoiding most throttles proactively</td>
+    </tr>
+    <tr>
+      <td><strong>Cross-endpoint awareness</strong></td>
+      <td>No — each endpoint has its own semaphore</td>
+      <td>Yes — a single shared budget covers all endpoints</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="finding">
+  <strong>Key distinction:</strong> Bounded concurrency limits how many calls run <em>simultaneously</em>.
+  Pacing limits how many calls run <em>within a time window</em>.
+  Both <code>/weather</code> and <code>/research</code> share the same server-side rate-limit bucket
+  (~5 requests per 30 s), but the semaphores in <code>agent.py</code> are independent per endpoint.
+</div>
+
+<!-- ════════════════════════════════════════ WHY max_concurrent=1 ═══ -->
+<h2>Why <code>/research</code> Uses <code>max_concurrent: 1</code></h2>
+
+<p>
+  The <code>/research</code> endpoint is slow: normal calls take roughly 3–8 s,
+  and pathological inputs can trigger a server-side timeout that returns an
+  empty <code>{}</code> body after ~15 s. In probe runs, concurrent research
+  fan-out performed poorly — under 5 parallel calls, some succeeded, one
+  returned <code>{}</code>, and two gave up after exhausting throttle retries.
+</p>
+
+<p>Serialising research calls avoids several failure modes:</p>
+
+<ul>
+  <li><strong>Competing retries.</strong> If two parallel research calls both hit
+    a throttle, they both sleep and retry simultaneously, doubling the burst
+    pressure when the window reopens.</li>
+  <li><strong>Retry storms from fan-out.</strong> With 5 parallel calls into a
+    partially full budget, multiple calls may throttle at once, and their
+    staggered retries can cascade.</li>
+  <li><strong>Wasted timeout slots.</strong> A concurrent research call that
+    times out after 15 s still consumed a rate-limit slot, reducing budget
+    for the calls that did return useful data.</li>
+</ul>
+
+<div class="note">
+  <strong>Trade-off:</strong> Serialisation makes multi-research turns slower
+  in wall-clock time (e.g., 3 calls × 5 s = ~15 s sequentially vs. ~5 s concurrent).
+  For a CLI chat app, predictable behaviour is more valuable than raw speed.
+</div>
+
+<!-- ════════════════════════════════════════ PROTECTS / DOES NOT ═══ -->
+<h2>What Bounded Concurrency Protects Against</h2>
+
+<table>
+  <thead>
+    <tr><th>Threat</th><th>Protected?</th><th>Mechanism</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Multiple research calls from one LLM turn all firing at once</td>
+      <td><strong>Yes</strong></td>
+      <td>Semaphore(1) serialises them</td>
+    </tr>
+    <tr>
+      <td>Competing retries from parallel research calls</td>
+      <td><strong>Yes</strong></td>
+      <td>Only one research call is active, so only one retry loop runs</td>
+    </tr>
+    <tr>
+      <td>Overloading a slow endpoint in a single turn</td>
+      <td><strong>Yes</strong></td>
+      <td>Calls queue behind the semaphore</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>What It Does Not Protect Against</h3>
+
+<table>
+  <thead>
+    <tr><th>Threat</th><th>Why Not</th><th>What Handles It Instead</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Shared bucket exhaustion from prior <code>/weather</code> calls</td>
+      <td>Research semaphore has no visibility into weather usage</td>
+      <td>Reactive throttle retry in <code>elyos_client.py</code></td>
+    </tr>
+    <tr>
+      <td>Server returning HTTP 200 throttle envelope</td>
+      <td>Bounded concurrency does not inspect response bodies</td>
+      <td>Throttle detection + retry loop in <code>elyos_client.py</code></td>
+    </tr>
+    <tr>
+      <td>Server-side <code>{}</code> timeout (~15 s)</td>
+      <td>Bounded concurrency does not know about response content</td>
+      <td><code>parsers/research.py</code> converts to <code>kind="timeout"</code></td>
+    </tr>
+    <tr>
+      <td>Cancelled calls consuming a rate-limit slot</td>
+      <td>Bounded concurrency releases the semaphore on cancel, but the server already counted the request</td>
+      <td>Warning in <code>cli_chat.py</code>; reactive retry on next call</td>
+    </tr>
+    <tr>
+      <td>Stale cached research results (~2-year-old data)</td>
+      <td>Not a concurrency concern</td>
+      <td><code>parsers/research.py</code> detects <code>cached: true</code> and humanises the age</td>
+    </tr>
+    <tr>
+      <td>Topic truncation at 50 characters</td>
+      <td>Not a concurrency concern</td>
+      <td><code>parsers/research.py</code> detects <code>truncated: true</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ════════════════════════════════════════ SCENARIOS ═══ -->
+<h2>Scenarios</h2>
+
+<!-- ── Scenario A ── -->
+<div class="scenario">
+  <div class="scenario-label">Scenario A</div>
+  <h4>LLM emits 3 research tool calls in one turn</h4>
+
+  <p>The LLM returns a single assistant message containing 3 <code>research_topic</code>
+     tool calls. <code>agent.py</code> gathers them with per-endpoint semaphores.</p>
+
+  <div class="vs-divider">without bounded concurrency</div>
+  <div class="timeline">
+    <span class="t-muted">t=0s</span>  call_1, call_2, call_3 all fire simultaneously<br>
+    <span class="t-muted">t=5s</span>  <span class="t-ok">call_1 returns (4.8s)</span><br>
+    <span class="t-muted">t=6s</span>  <span class="t-ok">call_2 returns (5.6s)</span><br>
+    <span class="t-muted">t=7s</span>  <span class="t-ok">call_3 returns (6.2s)</span>
+  </div>
+  <p class="summary-line">
+    <strong>3 API requests, ~7 s wall-clock.</strong>
+    Fast if all succeed. But if the budget is tight,
+    three simultaneous calls triple the chance of a throttle cascade.
+  </p>
+
+  <div class="vs-divider">with research max_concurrent = 1</div>
+  <div class="timeline">
+    <span class="t-muted">t=0s </span>  call_1 fires <span class="t-muted">(call_2, call_3 queued behind semaphore)</span><br>
+    <span class="t-muted">t=5s </span>  <span class="t-ok">call_1 returns</span> → call_2 fires<br>
+    <span class="t-muted">t=11s</span>  <span class="t-ok">call_2 returns</span> → call_3 fires<br>
+    <span class="t-muted">t=17s</span>  <span class="t-ok">call_3 returns</span>
+  </div>
+  <p class="summary-line">
+    <strong>3 API requests, ~17 s wall-clock.</strong>
+    Slower, but each call completes before the next starts.
+    No concurrent retry contention.
+  </p>
+</div>
+
+<!-- ── Scenario B ── -->
+<div class="scenario">
+  <div class="scenario-label">Scenario B</div>
+  <h4>LLM emits 5 research tool calls — resembling the probe stress case</h4>
+
+  <p>The LLM returns 5 <code>research_topic</code> calls.
+     The shared API budget has 3 of 5 slots remaining.</p>
+
+  <div class="vs-divider">without bounded concurrency</div>
+  <div class="timeline">
+    <span class="t-muted">t=0s </span>  all 5 fire simultaneously<br>
+    <span class="t-muted">t=0s </span>  <span class="t-ok">call_1, call_2, call_3 get server slots</span><br>
+    <span class="t-muted">t=0s </span>  <span class="t-fail">call_4, call_5 throttled</span> → sleep ~31s each<br>
+    <span class="t-muted">t=5s </span>  <span class="t-ok">call_1, call_2 return</span><br>
+    <span class="t-muted">t=8s </span>  <span class="t-ok">call_3 returns</span><br>
+    <span class="t-muted">t=31s</span>  <span class="t-warn">call_4 retry</span> → <span class="t-ok">succeeds</span><br>
+    <span class="t-muted">t=31s</span>  <span class="t-warn">call_5 retry</span> → <span class="t-ok">succeeds</span>
+  </div>
+  <p class="summary-line">
+    <strong>7 API requests, ~36 s wall-clock.</strong>
+    Two wasted requests on the initial throttles.
+    Both retries fire simultaneously, recreating burst pressure.
+  </p>
+
+  <div class="vs-divider">with research max_concurrent = 1</div>
+  <div class="timeline">
+    <span class="t-muted">t=0s </span>  call_1 fires<br>
+    <span class="t-muted">t=5s </span>  <span class="t-ok">call_1 returns</span> → call_2 fires<br>
+    <span class="t-muted">t=11s</span>  <span class="t-ok">call_2 returns</span> → call_3 fires <span class="t-muted">(last slot)</span><br>
+    <span class="t-muted">t=17s</span>  <span class="t-ok">call_3 returns</span> → call_4 fires<br>
+    <span class="t-muted">t=17s</span>  <span class="t-fail">call_4 throttled</span> <span class="t-muted">(budget exhausted)</span> → sleep ~31s<br>
+    <span class="t-muted">t=48s</span>  <span class="t-warn">call_4 retry</span> → <span class="t-ok">succeeds</span> → call_5 fires<br>
+    <span class="t-muted">t=54s</span>  <span class="t-ok">call_5 returns</span>
+  </div>
+  <p class="summary-line">
+    <strong>6 API requests, ~54 s wall-clock.</strong>
+    Slower total time, but only one throttle-and-retry cycle instead of two
+    concurrent retries. The first 3 calls succeed cleanly because they
+    never compete with each other for server slots.
+  </p>
+</div>
+
+<!-- ── Scenario C ── -->
+<div class="scenario">
+  <div class="scenario-label">Scenario C</div>
+  <h4>Prior <code>/weather</code> calls consumed the shared budget</h4>
+
+  <p>The LLM's previous tool round made 4 weather calls, consuming 4 of 5 slots.
+     It now emits 1 research call and 1 weather call.</p>
+
+  <div class="timeline">
+    <span class="t-muted">prior turn:</span>   4 × /weather → <span class="t-ok">all succeed</span>, 1 slot left in the 30s window<br>
+    <span class="t-muted">t=0s       </span>   research_topic fires, weather fires <span class="t-muted">(different semaphores)</span><br>
+    <span class="t-muted">t=0s       </span>   <span class="t-ok">one gets the last slot</span>; <span class="t-fail">the other is throttled</span><br>
+    <span class="t-muted">t=~31s     </span>   <span class="t-warn">throttled call retries</span> → <span class="t-ok">succeeds</span>
+  </div>
+  <p class="summary-line">
+    <strong>Bounded concurrency cannot prevent this.</strong>
+    The research semaphore has no visibility into weather's budget consumption.
+    The throttle is handled reactively by <code>elyos_client.py</code>'s retry loop.
+  </p>
+
+  <div class="warning">
+    <strong>Limitation:</strong> Because per-endpoint semaphores are independent, and the
+    server enforces a <em>shared</em> rate-limit bucket across both endpoints, bounded
+    concurrency alone cannot prevent cross-endpoint budget exhaustion.
+    Only proactive pacing with a single shared budget mirror could avoid this.
+  </div>
+</div>
+
+<!-- ── Scenario D ── -->
+<div class="scenario">
+  <div class="scenario-label">Scenario D</div>
+  <h4>User cancels a research call mid-flight (Ctrl+C)</h4>
+
+  <p>The user presses Ctrl+C while a research call is in flight at ~2 s into a ~6 s call.</p>
+
+  <div class="timeline">
+    <span class="t-muted">t=0s</span>  research call fires<br>
+    <span class="t-muted">t=2s</span>  <span class="t-fail">user presses Ctrl+C</span> → asyncio.CancelledError<br>
+    <span class="t-muted">    </span>  cli_chat.py cancels the turn task<br>
+    <span class="t-muted">    </span>  semaphore is released (async with exits)<br>
+    <span class="t-muted">    </span>  <span class="t-warn">but the server already received and counted the request</span>
+  </div>
+  <p class="summary-line">
+    <strong>The rate-limit slot is consumed regardless of cancellation.</strong>
+    <code>cli_chat.py</code> warns: "The interrupted API call may still count against the rate limit."
+    If the user's next message triggers another research call and the budget is tight,
+    <code>elyos_client.py</code>'s throttle retry handles the reactive recovery.
+  </p>
+</div>
+
+<!-- ════════════════════════════════════════ ENGINEERING TRADE-OFF ═══ -->
+<h2>Engineering Trade-off</h2>
+
+<p>
+  Bounded concurrency is intentionally simpler than a full pacing layer:
+</p>
+
+<ul>
+  <li>
+    <strong>Smaller codebase.</strong>
+    The semaphore logic is 6 lines in <code>agent.py</code>.
+    A proactive pacer would add a shared timestamp deque, a lock, and
+    budget-awareness across endpoints — roughly 40–60 additional lines.
+  </li>
+  <li>
+    <strong>Easier to reason about.</strong>
+    "At most N research calls run at once" is simpler to explain and
+    debug than "calls are delayed until a local sliding-window mirror
+    says a slot is available."
+  </li>
+  <li>
+    <strong>Accepts occasional reactive throttles.</strong>
+    When the budget is exhausted, <code>elyos_client.py</code>'s retry loop
+    handles it. The cost is one wasted API request plus ~31 s of sleep
+    per throttle — acceptable for a CLI chat with low concurrency.
+  </li>
+  <li>
+    <strong>Honest about what it does not do.</strong>
+    The system prompt and parsers surface rate-limit behaviour to the
+    LLM and the user. No component claims to prevent all throttles.
+  </li>
+</ul>
+
+<div class="note">
+  <strong>Alignment:</strong> This approach keeps the take-home code smaller
+  and easier to review. It trades a small number of reactive throttles for
+  significantly less implementation complexity.
+</div>
+
+<!-- ════════════════════════════════════════ DO NOT CLAIM ═══ -->
+<h2>Do Not Claim</h2>
+
+<p>
+  For accuracy, the following statements should <strong>not</strong> appear in
+  documentation or system prompts for this codebase:
+</p>
+
+<ul>
+  <li>The app prevents all throttles.</li>
+  <li>The app tracks the 5-per-30 s budget locally.</li>
+  <li>The app reserves rate-limit slots before making calls.</li>
+  <li>Cancellation frees a server-side rate-limit slot.</li>
+  <li>Retries use exponential backoff or jitter. <em>(They use the server's
+      <code>retry_after_seconds</code> value + 1 s fixed offset.)</em></li>
+  <li>The semaphore prevents throttles from the shared cross-endpoint budget.</li>
+</ul>
+
+<!-- ════════════════════════════════════════ REACTIVE STACK ═══ -->
+<h2>Reactive Resilience Stack</h2>
+
+<p>
+  Although the app does not proactively pace, it has a layered reactive defence:
+</p>
+
+<table>
+  <thead>
+    <tr><th>Layer</th><th>What It Handles</th><th>Config</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Bounded concurrency</strong></td>
+      <td>Limits simultaneous in-flight calls per endpoint</td>
+      <td><code>max_concurrent: 1</code> (research), <code>4</code> (weather)</td>
+    </tr>
+    <tr>
+      <td><strong>Throttle retry</strong></td>
+      <td>Detects <code>{"status":"throttled"}</code> in 200 body, sleeps <code>retry_after + 1</code></td>
+      <td><code>max_throttle_retries: 2</code></td>
+    </tr>
+    <tr>
+      <td><strong>Timeout retry</strong></td>
+      <td>Retries on <code>httpx.TimeoutException</code> (client-side timeout)</td>
+      <td><code>timeout_s: 20</code>, <code>max_timeout_retries: 1</code></td>
+    </tr>
+    <tr>
+      <td><strong>Empty body parsing</strong></td>
+      <td>Converts <code>{}</code> (server-side timeout) to structured <code>kind="timeout"</code></td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td><strong>Cancellation handling</strong></td>
+      <td>Catches <code>CancelledError</code>, warns user about slot consumption</td>
+      <td>—</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ════════════════════════════════════════ FOOTER ═══ -->
+<div class="footer">
+  <p>
+    <strong>Code references:</strong>
+    <code>agent.py</code> (semaphore creation, lines 38–45),
+    <code>elyos_client.py</code> (throttle retry, lines 68–78; timeout retry, lines 43–51),
+    <code>parsers/research.py</code> (empty body detection, line 31; cache detection, line 45),
+    <code>cli_chat.py</code> (cancellation warning, line 82),
+    <code>config.yaml</code> (endpoint configuration).
+  </p>
+</div>
+
+</div>
+</body>
+</html>
