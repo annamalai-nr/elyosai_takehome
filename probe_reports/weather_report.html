@@ -27,6 +27,18 @@
   Originals archived in <code>_archive/</code>.
 </p>
 
+<h2>Quirks</h2>
+<ol>
+  <li><strong>Throttle is HTTP 200, not 429.</strong> Rate limiting is hidden inside the response body as <code>{"status":"throttled"}</code>. Standard HTTP status code conventions are not used.</li>
+  <li><strong>Two success schemas, randomly assigned.</strong> The same city can return Shape&nbsp;A (flat) or Shape&nbsp;B (multi-observation array) on any call. Not city-locked, not deterministic. ~10&ndash;15% of calls return Shape&nbsp;B.</li>
+  <li><strong>Silent fuzzy matching.</strong> Mars&rarr;Marseille, &#x4eac;&#x90fd;&rarr;&#x4eac;&#x90fd;&#x5e02;. The API resolves to a real city without signalling that it changed the input. The response <code>location</code> field differs from the request, but only if you compare.</li>
+  <li><strong>Fabrication for fictional cities.</strong> Atlantis returns fabricated weather data with no error. The API invents plausible-looking numbers for non-existent locations.</li>
+  <li><strong>Cancelled calls still consume a throttle slot.</strong> The server processes the request on arrival. Client-side cancellation (timeout or <code>asyncio.task.cancel()</code>) does not free the slot.</li>
+  <li><strong>Shared rate-limit bucket with /research.</strong> Both endpoints draw from the same ~5-per-30&nbsp;s window. A weather-heavy turn can starve a subsequent research call.</li>
+  <li><strong>Mixed casing in Shape&nbsp;B conditions.</strong> "Overcast" (capitalised) vs "light rain" (lowercase) in the same response array.</li>
+  <li><strong>Aggressive caching.</strong> Repeated identical queries return bit-identical bodies (same SHA). Contrast with /research which generates fresh content each time.</li>
+</ol>
+
 <h2>TL;DR</h2>
 <ol>
   <li><strong>Rate limit is HTTP 200 with body envelope, not 429.</strong> After ~5 successful calls per ~30&nbsp;s window, the response is <code>{"status":"throttled","retry_after_seconds":N,"data":null}</code>.</li>

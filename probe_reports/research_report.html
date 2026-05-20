@@ -28,6 +28,19 @@
   Originals archived in <code>_archive/</code>.
 </p>
 
+<h2>Quirks</h2>
+<ol>
+  <li><strong>Empty <code>{}</code> is HTTP 200 hiding a server-side timeout.</strong> Both observed instances took exactly ~15.035&nbsp;s. No error status code, no error body &mdash; just an empty JSON object on a 200.</li>
+  <li><strong>Two success schemas: fresh vs cached.</strong> Cached responses carry a stale <code>generated_at: "2024-03-15T09:00:00Z"</code> and extra <code>cached: true</code> / <code>cache_age_seconds</code> fields. The schema you get depends on the topic, not timing.</li>
+  <li><strong>Topics silently truncated at 50 characters.</strong> The API chops the input and adds <code>truncated: true</code>, <code>processed_topic</code>, and <code>original_topic_length</code> to the response. No 422 or rejection.</li>
+  <li><strong>Cancelled calls still consume a throttle slot.</strong> Both timeout-cancel (ReadTimeout at 100&nbsp;ms) and <code>asyncio.task.cancel()</code> (at 2&nbsp;s mid-flight) consume budget. Especially dangerous for /research because 3&ndash;8&nbsp;s response time makes Ctrl+C much more likely.</li>
+  <li><strong>Shared rate-limit bucket with /weather.</strong> Both endpoints draw from the same ~5-per-30&nbsp;s window. A weather-heavy turn can starve a subsequent research call.</li>
+  <li><strong>No input normalisation (unlike /weather).</strong> No case folding, no whitespace stripping. <code>"&nbsp;&nbsp;solar energy&nbsp;&nbsp;"</code> and <code>"SOLAR ENERGY"</code> produce different results from <code>"solar energy"</code>.</li>
+  <li><strong>Does NOT cache identical queries (unlike /weather).</strong> 4 calls to <code>?topic=solar energy</code> returned 4 different SHAs with different <code>generated_at</code> timestamps. /weather returns bit-identical bodies.</li>
+  <li><strong>Short/garbage inputs trigger a 15&nbsp;s timeout.</strong> Single character <code>"a"</code> caused the server to hang for 15&nbsp;s then return <code>{}</code>.</li>
+  <li><strong>Empty string returns data, not 404.</strong> <code>?topic=</code> returns Schema&nbsp;A with <code>topic:""</code>. Contrast with /weather which returns 404 for empty location.</li>
+</ol>
+
 <h2>TL;DR</h2>
 <ol>
   <li><strong>Empty <code>{}</code> response is a server-side timeout.</strong> Both observed instances took exactly ~15&nbsp;s. HTTP 200 hiding a failure.</li>
