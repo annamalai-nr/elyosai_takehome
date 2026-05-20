@@ -9,11 +9,7 @@ Project-specific product, UX, and assignment-shape rules belong in
 
 - `backend/reference_docs/allowed_models.csv` is the allowlist for model names.
 - `backend/reference_docs/llm_rules.md` is the source of truth for provider-safe
-  token, temperature, reasoning, and helper-function rules.
-- `backend/llm_utils/litellm_kwargs.py` is the text-model kwargs mapper for
-  LiteLLM and `ChatLiteLLM`. Use it if you choose to call LiteLLM. The take-home
-  also allows calling the provider's official SDK directly — that path skips
-  these helpers entirely.
+  token, temperature, and reasoning rules.
 
 ## Core Principles
 
@@ -59,13 +55,13 @@ Project-specific product, UX, and assignment-shape rules belong in
 ## LLM Integration
 
 1. **Text-in / text-out can go through LiteLLM, OR through the provider's official SDK.**
-   For this take-home the recommended path is the official SDK (see rule 8). The LiteLLM
-   helpers are ported and available for completeness, not because they're required.
+   For this take-home the recommended path is the official SDK (see rule 8), but
+   this implementation uses the LiteLLM Python SDK to keep model selection
+   config-driven.
 2. **Model names are config-driven**. Never hardcode model strings in calling code.
 3. **Allowed models come only from** `backend/reference_docs/allowed_models.csv`.
-4. **Provider-specific kwargs belong in helper modules**. Do not hand-write token /
-   temperature / reasoning kwargs at call sites — use `backend/llm_utils/litellm_kwargs.py`
-   if using LiteLLM, or follow the provider's SDK conventions directly.
+4. **Provider-specific kwargs belong at the LLM call boundary**. Keep token,
+   temperature, and reasoning handling local to the adapter that calls the model.
 5. **Structured output is schema-first**. Do not parse JSON with regex, code-fence
    stripping, or string slicing if you need structured data.
 6. **Keep detailed model-policy logic out of this file**. Put it in `backend/reference_docs/llm_rules.md`.

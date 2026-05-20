@@ -26,7 +26,7 @@ Builds a CLI streaming chat application that calls two real-world APIs
 │   ├── parsers/                       response parsers + JSON envelope
 │   │   ├── __init__.py                envelope() — untrusted data wrapper
 │   │   ├── weather.py                 /weather response normalization
-│   │   └── research.py                /research response normalization
+│   │   └── research.py               /research response normalization
 │   ├── tools/                         tool schemas + execution + Elyos API
 │   │   ├── schemas.py                 LLM tool schemas
 │   │   ├── dispatch.py                tool execution dispatch
@@ -56,8 +56,8 @@ conda activate elyosai
 cd /Users/annamalainarayanan/Desktop/personal/interview_prep/elyosai
 pip install -e .
 
-# 3. Confirm the .env is present (already populated with the API key)
-cat .env   # should show ELYOS_API_KEY=<your-key>
+# 3. Confirm the .env is present without printing the key
+test -f .env && grep -q '^ELYOS_API_KEY=' .env && echo ".env contains ELYOS_API_KEY"
 ```
 
 ### Every session

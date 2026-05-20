@@ -1,9 +1,7 @@
 # Elyos Take-Home — Claude Code Repo Notes
 
 - Follow `north_stars.md` for repo-wide engineering constraints.
-- Follow `backend/reference_docs/llm_rules.md` for any LLM usage (LiteLLM /
-  LangChain `ChatLiteLLM` for text via the ported helpers, OR the provider's
-  official SDK directly per the take-home's instructions).
+- Follow `backend/reference_docs/llm_rules.md` for any LLM usage.
 - Allowed model names live in `backend/reference_docs/allowed_models.csv`.
 - Project-specific context belongs in `project_context.md`. Do not infer
   missing assignment rules.

@@ -9,13 +9,8 @@ openai
 anthropic
 langsmith
 
-# LiteLLM + ported helpers (backend/llm_utils/)
-langchain-core
-langchain-litellm
-
 # Data validation
 pydantic
-pydantic-settings
 
 # Dev
 black

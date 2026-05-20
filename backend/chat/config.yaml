@@ -10,7 +10,8 @@ elyos_api:
     weather:
       path: "/weather"
       timeout_s: 15
-      max_concurrent: 4
+      max_concurrent: 1
+      # Weather is fast in probes; no timeout retry configured.
     research:
       path: "/research"
       timeout_s: 20

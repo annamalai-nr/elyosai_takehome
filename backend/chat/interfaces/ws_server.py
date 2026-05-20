@@ -26,15 +26,22 @@ async def _handler(ws):
 
     async with httpx.AsyncClient() as client:
         async for raw in ws:
-            msg = json.loads(raw)
-            messages.append({"role": "user", "content": msg["content"]})
+            try:
+                msg = json.loads(raw)
+                content = msg["content"]
+                if not isinstance(content, str):
+                    raise ValueError("content must be a string")
+            except (json.JSONDecodeError, KeyError, TypeError, ValueError) as e:
+                await emit({"type": "error", "message": f"Invalid message: {e}"})
+                await emit({"type": "done"})
+                continue
+
+            messages.append({"role": "user", "content": content})
             if max_hist:
                 _trim_history(messages, max_hist)
             state["partial"] = ""
             try:
                 await stream_turn(client, cfg, messages, state, emit=emit)
-            except asyncio.CancelledError:
-                await emit({"type": "cancelled"})
             except Exception as e:
                 log.exception("Turn error")
                 await emit({"type": "error", "message": str(e)})

@@ -17,10 +17,10 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "research_topic",
-            "description": "Look up a best-effort research summary. May return generic, cached, truncated, or timeout results.",
+            "description": "Look up factual information about a topic, including rankings, lists, comparisons, statistics, and summaries. May return generic, cached, truncated, or timeout results.",
             "parameters": {
                 "type": "object",
-                "properties": {"topic": {"type": "string", "description": "Topic to research, e.g. 'solar energy'"}},
+                "properties": {"topic": {"type": "string", "description": "Topic or factual question to research, e.g. 'top Indian cities by per capita income'"}},
                 "required": ["topic"],
             },
         },

@@ -48,6 +48,9 @@ build/
 *.log
 logs/
 
+# Local runtime artifacts (PID files, server logs)
+.tmp/
+
 # Local raw probe outputs — never commit, contain API responses
 weather_*.raw
 research_*.raw

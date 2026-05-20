@@ -9,19 +9,8 @@ log = logging.getLogger(__name__)
 
 
 def _humanize_seconds(seconds: int) -> str:
-    days = seconds // 86400
-    if days >= 365:
-        years = days // 365
-        return f"~{years} year{'s' if years != 1 else ''}"
-    if days >= 30:
-        months = days // 30
-        return f"~{months} month{'s' if months != 1 else ''}"
-    if days >= 1:
-        return f"~{days} day{'s' if days != 1 else ''}"
-    hours = seconds // 3600
-    if hours >= 1:
-        return f"~{hours} hour{'s' if hours != 1 else ''}"
-    return f"{seconds} seconds"
+    days = max(seconds // 86400, 1)
+    return f"~{days} day{'s' if days != 1 else ''}"
 
 
 def parse_research(data: dict) -> ResearchResult | dict:

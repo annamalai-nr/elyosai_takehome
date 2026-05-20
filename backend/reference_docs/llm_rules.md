@@ -1,8 +1,4 @@
-# LLM and Voice Model Rules — Elyos Take-Home (ported from Eugenix CP2)
-
-This file is ported from `eugenix_cp2/backend/reference_docs/llm_rules.md`.
-It documents the LiteLLM / ChatLiteLLM kwargs rules used by
-`backend/llm_utils/litellm_kwargs.py`.
+# LLM and Voice Model Rules — Elyos Take-Home
 
 The Elyos take-home allows OpenAI, Anthropic, or similar. The original prompt
 recommends official SDKs, but `backend/chat/` deliberately uses the LiteLLM
@@ -21,7 +17,7 @@ models remain out of scope for the take-home.
 
 ## Models covered by this doc
 
-**Text models** (LiteLLM / ChatLiteLLM rules apply):
+**Text models** (LiteLLM rules apply):
 `gpt-5.4`, `gpt-5.4-pro`, `gpt-5.4-mini`, `gpt-5.5`, `gpt-5.5-pro`,
 `anthropic/claude-opus-4-7`, `anthropic/claude-opus-4-6`, `anthropic/claude-sonnet-4-6`, `anthropic/claude-haiku-4-5-20251001`,
 `gemini/gemini-3.1-pro-preview`, `gemini/gemini-3.1-flash-preview`, `gemini/gemini-3.1-flash-lite-preview`.
@@ -74,7 +70,7 @@ ticket/chat-service-specific blocks from Eugenix CP2 are not in scope.
 
 ---
 
-## Text LLM rules (LiteLLM / ChatLiteLLM)
+## Text LLM rules (LiteLLM)
 
 ### Token caps
 

@@ -331,6 +331,17 @@ body::before {
   border: 1px solid var(--border);
 }
 
+.message.assistant .bubble ul {
+  margin: 6px 0;
+  padding-left: 20px;
+  list-style: disc;
+}
+
+.message.assistant .bubble li {
+  margin-bottom: 3px;
+  line-height: 1.55;
+}
+
 /* Interrupted */
 .message.interrupted .bubble {
   opacity: 0.55;
@@ -1266,6 +1277,19 @@ function escapeHtml(s) {
   return div.innerHTML;
 }
 
+function renderMarkdown(text) {
+  let html = escapeHtml(text);
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+  html = html.replace(/^[-–] (.+)$/gm, '<li>$1</li>');
+  html = html.replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>');
+  html = html.replace(/\n{2,}/g, '</p><p>');
+  html = html.replace(/\n/g, '<br>');
+  html = '<p>' + html + '</p>';
+  html = html.replace(/<p><\/p>/g, '');
+  return html;
+}
+
 // ── WebSocket Connection ──
 const WS_URL = 'ws://localhost:8765';
 let ws = null;
@@ -1298,7 +1322,7 @@ function handleEvent(ev) {
         currentText = '';
       }
       currentText += ev.content;
-      currentBubble.querySelector('.bubble').textContent = currentText;
+      currentBubble.querySelector('.bubble').innerHTML = renderMarkdown(currentText);
       scrollToBottom();
       break;
     case 'tool_start':
@@ -1318,13 +1342,6 @@ function handleEvent(ev) {
       removeStreamingIndicator();
       currentBubble = null;
       addAssistantMessage('<p style="color:var(--accent-error)">' + escapeHtml(ev.message) + '</p>');
-      break;
-    case 'cancelled':
-      removeStreamingIndicator();
-      if (currentBubble) {
-        currentBubble.classList.add('interrupted');
-        currentBubble.querySelector('.bubble').innerHTML += '<div class="interrupted-badge">&#9632; Interrupted</div>';
-      }
       break;
     case 'done':
       removeStreamingIndicator();

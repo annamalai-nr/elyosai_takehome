@@ -4,9 +4,7 @@
 
 - Follow `north_stars.md` for coding constraints (simplicity, single
   responsibility, absolute imports, no pytest, conda-only, ~250 LOC target).
-- Follow `backend/reference_docs/llm_rules.md` for any LLM calls. The take-home
-  recommends the provider's official SDK directly; the LiteLLM helpers are
-  available but optional.
+- Follow `backend/reference_docs/llm_rules.md` for any LLM calls.
 - Follow `backend/reference_docs/llm_prompting_guide.md` when writing or
   reviewing prompts.
 - Allowed model names live in `backend/reference_docs/allowed_models.csv`.

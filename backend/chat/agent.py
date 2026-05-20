@@ -18,11 +18,15 @@ MAX_TOOL_ROUNDS: int = 5
 _TOOL_ENDPOINT = {"get_weather": "weather", "research_topic": "research"}
 
 
-async def _execute_with_semaphore(
-    sem: asyncio.Semaphore, client: httpx.AsyncClient, cfg: dict, tool_call: ToolCall, emit=None,
+async def _bounded_execute(
+    sem: asyncio.Semaphore,
+    client: httpx.AsyncClient,
+    cfg: dict,
+    tc: ToolCall,
+    emit,
 ) -> dict:
     async with sem:
-        return await execute_tool_call(client, cfg, tool_call, emit=emit)
+        return await execute_tool_call(client, cfg, tc, emit=emit)
 
 
 @traceable(run_type="chain", name="chat_turn")
@@ -33,7 +37,7 @@ async def stream_turn(
     state: dict,
     emit=None,
 ) -> None:
-    """ReAct loop: LLM turn → tool execution → observation → repeat."""
+    """ReAct loop: LLM turn -> tool execution -> observation -> repeat."""
     endpoints = cfg["elyos_api"]["endpoints"]
 
     for _round in range(MAX_TOOL_ROUNDS):
@@ -52,20 +56,15 @@ async def stream_turn(
                     args = {}
                 await emit({"type": "tool_start", "name": tc.name, "args": args})
 
-        log.debug("Round %d: executing %d tool call(s)", _round + 1, len(turn.tool_calls))
         sems: dict[str, asyncio.Semaphore] = {}
-        pairs = [
-            (_TOOL_ENDPOINT.get(tc.name, "weather"), tc)
-            for tc in turn.tool_calls
-        ]
+        pairs = [(_TOOL_ENDPOINT.get(tc.name, "weather"), tc) for tc in turn.tool_calls]
         for ep, _ in pairs:
             if ep not in sems:
                 sems[ep] = asyncio.Semaphore(endpoints[ep]["max_concurrent"])
 
-        observations = await asyncio.gather(*[
-            _execute_with_semaphore(sems[ep], client, cfg, tc, emit=emit)
-            for ep, tc in pairs
-        ])
+        observations = await asyncio.gather(
+            *[_bounded_execute(sems[ep], client, cfg, tc, emit) for ep, tc in pairs]
+        )
         messages.extend(observations)
 
     log.warning("Max tool rounds (%d) reached", MAX_TOOL_ROUNDS)
