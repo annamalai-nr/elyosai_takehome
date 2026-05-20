@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -927,7 +927,6 @@ body::before {
   <div class="header">
     <div class="header-left">
       <div class="logo">Elyos<em>Chat</em></div>
-      <span class="header-meta" id="modelLabel">gpt-5.4-mini</span>
     </div>
     <div class="header-right">
       <div class="status-pill" id="statusPill">
@@ -935,7 +934,7 @@ body::before {
         <span id="statusText">Ready</span>
       </div>
       <button class="theme-toggle" id="themeToggle" title="Toggle theme">
-        <span id="themeIcon">&#9790;</span>
+        <span id="themeIcon">&#9728;</span>
       </button>
     </div>
   </div>
@@ -980,6 +979,7 @@ body::before {
       <textarea id="userInput" rows="1" placeholder="Ask about weather or research..."
                 onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
       <button class="send-btn" id="sendBtn" onclick="sendMessage()">&#8593;</button>
+      <button class="cancel-btn" id="cancelBtn" onclick="cancelTurn()" style="display:none;" title="Cancel">&#9632;</button>
     </div>
   </div>
 </div>
@@ -990,7 +990,7 @@ const state = {
   messages: [],
   isStreaming: false,
   isRateLimited: false,
-  theme: 'dark',
+  theme: 'light',
   rateLimitCount: 0,
   maxRate: 5
 };
@@ -1002,6 +1002,7 @@ const containerEl = $('messagesContainer');
 const welcomeEl = $('welcome');
 const inputEl = $('userInput');
 const sendBtn = $('sendBtn');
+const cancelBtn = $('cancelBtn');
 const statusPill = $('statusPill');
 const statusText = $('statusText');
 const rateLimitBar = $('rateLimitBar');
@@ -1343,6 +1344,15 @@ function handleEvent(ev) {
       currentBubble = null;
       addAssistantMessage('<p style="color:var(--accent-error)">' + escapeHtml(ev.message) + '</p>');
       break;
+    case 'cancelled':
+      removeStreamingIndicator();
+      if (currentBubble) {
+        currentBubble.classList.add('interrupted');
+        currentBubble.querySelector('.bubble').innerHTML += '<div class="interrupted-badge">&#9632; Interrupted</div>';
+      } else {
+        addAssistantMessage('<p style="opacity:0.55;font-style:italic">Cancelled.</p>');
+      }
+      break;
     case 'done':
       removeStreamingIndicator();
       finishStreaming();
@@ -1361,16 +1371,23 @@ function sendMessage() {
   inputEl.value = '';
   inputEl.style.height = 'auto';
   state.isStreaming = true;
-  sendBtn.disabled = true;
+  sendBtn.style.display = 'none';
+  cancelBtn.style.display = 'flex';
   statusText.textContent = 'Thinking...';
   addStreamingIndicator('Thinking');
 
   ws.send(JSON.stringify({ content: text }));
 }
 
+function cancelTurn() {
+  if (!state.isStreaming || !ws || ws.readyState !== 1) return;
+  ws.send(JSON.stringify({ type: 'cancel' }));
+}
+
 function finishStreaming() {
   state.isStreaming = false;
-  sendBtn.disabled = false;
+  sendBtn.style.display = 'flex';
+  cancelBtn.style.display = 'none';
   statusText.textContent = 'Connected';
   inputEl.focus();
 }

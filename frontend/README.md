@@ -13,31 +13,31 @@ backend's WebSocket server.
 
 **Client sends:**
 ```json
-{"content": "What's the weather in Tokyo?"}
+{"content": "What's the weather in Tokyo?"}    // new user message
+{"type": "cancel"}                              // cancel in-flight turn
 ```
 
 **Server streams events:**
 
-| Event type    | Description                                      |
-|---------------|--------------------------------------------------|
-| `text`        | Streamed LLM text token                          |
-| `tool_start`  | Tool call initiated (name + args)                |
+| Event type    | Description                                       |
+|---------------|---------------------------------------------------|
+| `text`        | Streamed LLM text token                           |
+| `tool_start`  | Tool call initiated (name + args)                 |
 | `status`      | Status message (e.g. "Looking up weather...")     |
 | `tool_result` | Parsed tool result (weather card or research card)|
-| `error`       | Error from API or LLM                            |
-| `done`        | Turn complete                                    |
-
-> Note: cancellation is CLI-only (SIGINT). The WebSocket server does not emit
-> a `cancelled` event and the web UI has no cancel button.
+| `error`       | Error from API or LLM                             |
+| `cancelled`   | Turn was cancelled (user pressed the cancel btn)  |
+| `done`        | Turn complete (always emitted last)               |
 
 ### Features
 
 - Streaming text display with typing indicator
+- Mid-flight cancel button (swaps in for the send button while streaming)
 - Weather cards with temperature, condition, humidity
 - Research cards with topic, summary, sources, cache/freshness status
 - Rate-limit status indicator in the status bar
 - Connection state with auto-reconnect on disconnect
-- Dark mode by default with light mode toggle
+- Light mode by default with dark mode toggle
 - Responsive layout
 
 ## Running
