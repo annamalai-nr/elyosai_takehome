@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>/research — Resilience Scenarios</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;0,6..72,700;1,6..72,400&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #faf9f6;
+    --surface: #ffffff;
+    --ink: #1c1917;
+    --ink-secondary: #57534e;
+    --ink-muted: #78716c;
+    --border: #e7e5e4;
+    --border-strong: #d6d3d1;
+    --accent: #b45309;
+    --accent-soft: #fef3c7;
+    --accent-border: #f59e0b;
+    --major: #991b1b;
+    --major-bg: #fef2f2;
+    --major-border: #fca5a5;
+    --minor: #4338ca;
+    --minor-bg: #eef2ff;
+    --minor-border: #a5b4fc;
+    --green: #166534;
+    --green-bg: #f0fdf4;
+    --green-border: #86efac;
+    --code-bg: #f5f5f4;
+    --pre-bg: #1c1917;
+    --pre-text: #e7e5e4;
+    --heading-font: 'Newsreader', Georgia, serif;
+    --body-font: 'Outfit', system-ui, sans-serif;
+    --mono-font: 'JetBrains Mono', 'Cascadia Code', monospace;
+    --shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(28, 25, 23, 0.07), 0 2px 4px -2px rgba(28, 25, 23, 0.05);
+
+    --case1: #991b1b;
+    --case1-bg: #fef2f2;
+    --case1-border: #fca5a5;
+    --case2: #166534;
+    --case2-bg: #f0fdf4;
+    --case2-border: #86efac;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--body-font);
+    font-weight: 400;
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--ink);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .container {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 3em 2em 6em;
+  }
+
+  /* ── Header ── */
+  .report-header {
+    padding-bottom: 2em;
+    margin-bottom: 2.5em;
+    border-bottom: 1px solid var(--border);
+  }
+  .report-header .endpoint {
+    font-family: var(--mono-font);
+    font-size: 0.8em;
+    font-weight: 500;
+    color: var(--accent);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 0.5em;
+  }
+  .report-header h1 {
+    font-family: var(--heading-font);
+    font-size: 2.4em;
+    font-weight: 700;
+    line-height: 1.15;
+    color: var(--ink);
+    margin-bottom: 0.5em;
+  }
+  .report-header .subtitle {
+    font-size: 0.92em;
+    color: var(--ink-secondary);
+    line-height: 1.65;
+  }
+
+  /* ── Section headings ── */
+  h2 {
+    font-family: var(--heading-font);
+    font-size: 1.5em;
+    font-weight: 600;
+    color: var(--ink);
+    margin-top: 3em;
+    margin-bottom: 0.75em;
+    padding-bottom: 0.35em;
+    border-bottom: 1px solid var(--border);
+  }
+  h2:first-of-type { margin-top: 0; }
+
+  h3 {
+    font-family: var(--heading-font);
+    font-size: 1.15em;
+    font-weight: 600;
+    color: var(--ink);
+    margin-top: 1.75em;
+    margin-bottom: 0.5em;
+  }
+
+  /* ── Prose ── */
+  p { margin-bottom: 1em; color: var(--ink-secondary); }
+  p strong { color: var(--ink); }
+  li { color: var(--ink-secondary); }
+  li strong { color: var(--ink); }
+  ul, ol { margin: 0.75em 0 1.25em 1.5em; }
+  li { margin-bottom: 0.5em; }
+
+  /* ── Inline code ── */
+  code {
+    font-family: var(--mono-font);
+    font-size: 0.82em;
+    font-weight: 400;
+    background: var(--code-bg);
+    color: var(--ink);
+    padding: 0.15em 0.4em;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+
+  /* ── Code blocks ── */
+  pre {
+    font-family: var(--mono-font);
+    font-size: 0.82em;
+    line-height: 1.65;
+    background: var(--pre-bg);
+    color: var(--pre-text);
+    padding: 1.25em 1.5em;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 1em 0 1.5em;
+    box-shadow: var(--shadow-md);
+  }
+  pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    color: inherit;
+    font-size: inherit;
+  }
+
+  /* ── Tables ── */
+  table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 1em 0 1.5em;
+    background: var(--surface);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  th {
+    font-family: var(--body-font);
+    font-size: 0.78em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-muted);
+    background: var(--bg);
+    padding: 0.75em 1em;
+    text-align: left;
+    border-bottom: 1px solid var(--border-strong);
+  }
+  td {
+    font-size: 0.9em;
+    padding: 0.7em 1em;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  tr:last-child td { border-bottom: none; }
+
+  /* ── Callout boxes ── */
+  .finding {
+    background: var(--accent-soft);
+    border-left: 4px solid var(--accent-border);
+    padding: 1em 1.25em;
+    margin: 1.25em 0;
+    border-radius: 0 6px 6px 0;
+    font-size: 0.93em;
+  }
+  .finding strong { color: var(--accent); }
+
+  .note {
+    background: var(--green-bg);
+    border-left: 4px solid var(--green-border);
+    padding: 1em 1.25em;
+    margin: 1.25em 0;
+    border-radius: 0 6px 6px 0;
+    font-size: 0.93em;
+  }
+  .note strong { color: var(--green); }
+
+  /* ── Scenario container ── */
+  .scenario {
+    margin-top: 2em;
+    padding: 1.5em;
+    background: var(--surface);
+    border-radius: 8px;
+    box-shadow: var(--shadow-sm);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .scenario h3 {
+    margin-top: 0;
+    font-size: 1.05em;
+  }
+  .scenario p { font-size: 0.93em; }
+
+  /* ── Case comparison boxes ── */
+  .cases {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25em;
+    margin-top: 1.25em;
+  }
+  @media (max-width: 700px) {
+    .cases { grid-template-columns: 1fr; }
+  }
+
+  .case {
+    border-radius: 6px;
+    padding: 1.15em;
+    font-size: 0.9em;
+  }
+  .case h4 {
+    font-family: var(--body-font);
+    font-size: 0.78em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 0.85em;
+    padding-bottom: 0.5em;
+    border-bottom: 1px solid;
+  }
+  .case-bad {
+    background: var(--case1-bg);
+    border: 1px solid var(--case1-border);
+  }
+  .case-bad h4 {
+    color: var(--case1);
+    border-bottom-color: var(--case1-border);
+  }
+  .case-good {
+    background: var(--case2-bg);
+    border: 1px solid var(--case2-border);
+  }
+  .case-good h4 {
+    color: var(--case2);
+    border-bottom-color: var(--case2-border);
+  }
+
+  /* ── Timeline ── */
+  .timeline {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    position: relative;
+  }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 3.8em;
+    top: 0.5em;
+    bottom: 0.5em;
+    width: 1px;
+    background: var(--border-strong);
+  }
+  .timeline li {
+    position: relative;
+    padding: 0.3em 0 0.3em 5em;
+    margin-bottom: 0.15em;
+    font-size: 0.88em;
+    line-height: 1.5;
+    color: var(--ink-secondary);
+  }
+  .timeline .ts {
+    position: absolute;
+    left: 0;
+    width: 3.5em;
+    text-align: right;
+    font-family: var(--mono-font);
+    font-size: 0.85em;
+    color: var(--ink-muted);
+    font-weight: 400;
+  }
+  .timeline .dot {
+    position: absolute;
+    left: 3.45em;
+    top: 0.55em;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    border: 2px solid;
+  }
+  .dot-fire   { background: #3b82f6; border-color: #2563eb; }
+  .dot-ok     { background: #22c55e; border-color: #16a34a; }
+  .dot-wait   { background: #f59e0b; border-color: #d97706; }
+  .dot-fail   { background: #ef4444; border-color: #dc2626; }
+  .dot-cancel { background: #a78bfa; border-color: #7c3aed; }
+  .dot-user   { background: #78716c; border-color: #57534e; }
+
+  /* ── Outcome summary ── */
+  .outcome {
+    margin-top: 0.85em;
+    padding-top: 0.65em;
+    border-top: 1px dashed;
+    font-size: 0.88em;
+    font-weight: 500;
+  }
+  .case-bad .outcome  { border-top-color: var(--case1-border); color: var(--case1); }
+  .case-good .outcome { border-top-color: var(--case2-border); color: var(--case2); }
+
+  /* ── Config reference ── */
+  .config-ref {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 1.25em 1.5em;
+    margin: 1em 0 1.5em;
+    font-size: 0.93em;
+  }
+  .config-ref code { font-size: 0.85em; }
+
+  /* ── Source footer ── */
+  .source-data {
+    margin-top: 3em;
+    padding-top: 1.5em;
+    border-top: 1px solid var(--border);
+    font-size: 0.88em;
+    color: var(--ink-muted);
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 640px) {
+    .container { padding: 1.5em 1em 4em; }
+    .report-header h1 { font-size: 1.8em; }
+    h2 { font-size: 1.3em; }
+    .scenario { padding: 1em; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<header class="report-header">
+  <div class="endpoint">/research endpoint</div>
+  <h1>Resilience Scenarios</h1>
+  <p class="subtitle">
+    Four scenarios showing how the proactive pacer, bounded concurrency, and retry stack
+    protect the chat app against the /research API's rate-limiting, timeouts, and cancellation behaviour.
+    Each scenario compares a naive approach (no pacer) against the full resilience stack.
+  </p>
+</header>
+
+<h2>API Constraints</h2>
+<div class="config-ref">
+  <p style="margin-bottom: 0.5em;"><strong>Server-side:</strong></p>
+  <ul style="margin-top: 0.25em;">
+    <li><strong>~5 requests per ~30&nbsp;s sliding window</strong>, shared across /weather and /research</li>
+    <li>Throttle is HTTP 200 with body <code>{"status":"throttled", "retry_after_seconds":N}</code>, not 429</li>
+    <li>Response time: <strong>3&ndash;8&nbsp;s</strong> per successful call (vs ~150&nbsp;ms for /weather)</li>
+    <li>Server-side timeout at ~15&nbsp;s returns <code>{}</code> (empty JSON, still HTTP 200)</li>
+    <li>Cancelled calls still consume a throttle slot on the server</li>
+  </ul>
+  <p style="margin-bottom: 0.5em; margin-top: 1em;"><strong>Client-side resilience stack:</strong></p>
+  <ul style="margin-top: 0.25em;">
+    <li><code>pacing.py</code> &mdash; <code>wait_for_budget()</code>: proactive sliding-window tracker with shared <code>"api"</code> key</li>
+    <li><code>agent.py</code> &mdash; <code>asyncio.Semaphore(1)</code> for /research (serialises concurrent calls)</li>
+    <li><code>elyos_client.py</code> &mdash; throttle retry (up to 2 retries, sleeps <code>retry_after + 1</code>&nbsp;s)</li>
+    <li><code>elyos_client.py</code> &mdash; client-side timeout at 20&nbsp;s with 1 timeout retry</li>
+    <li><code>parsers/research.py</code> &mdash; empty-body detection (<code>{}</code> &rarr; <code>kind="timeout"</code>)</li>
+    <li><code>cli_chat.py</code> &mdash; SIGINT cancellation with user warning</li>
+  </ul>
+</div>
+
+<h2>How the Proactive Pacer Works</h2>
+<p>
+  The server enforces a rate limit of ~5 requests per ~30&nbsp;s sliding window, but it does not
+  use HTTP 429. Instead it returns HTTP 200 with a JSON body: <code>{"status":"throttled"}</code>.
+  A naive client would not know it was throttled until it parsed the response body &mdash; and by then
+  it has already wasted a round trip.
+</p>
+<p>
+  The proactive pacer (<code>wait_for_budget</code> in <code>pacing.py</code>) mirrors the server's
+  sliding window on the client side so that calls are delayed <em>before</em> they hit the server,
+  not after. It works like this:
+</p>
+
+<div class="scenario">
+  <h3>Client-side budget: a deque of timestamps</h3>
+  <p>
+    The pacer maintains a single shared deque (named <code>"api"</code>) that records the timestamp
+    of every API call &mdash; weather or research &mdash; within the current window. Before each call,
+    <code>wait_for_budget</code> runs this logic:
+  </p>
+  <ol style="margin-top: 0.5em; font-size: 0.93em;">
+    <li><strong>Expire old entries.</strong> Remove any timestamps older than <code>window_s</code> (30&nbsp;s) from the front of the deque.</li>
+    <li><strong>Check capacity.</strong> If the deque has fewer than <code>max_requests_per_window</code> (5) entries, append the current timestamp and proceed &mdash; the call is allowed.</li>
+    <li><strong>Wait if full.</strong> If the deque is at capacity, calculate how long until the oldest entry expires (<code>window_s &minus; age_of_oldest</code>), print <em>&ldquo;Rate budget full, pacing for Ns&hellip;&rdquo;</em>, sleep that duration, and re-check.</li>
+  </ol>
+  <p>
+    The timestamp is recorded <strong>before</strong> the HTTP call begins, not after it completes.
+    This is critical: if the call is cancelled mid-flight or times out, the slot is already accounted for
+    in the client-side budget &mdash; matching the server's behaviour where cancelled calls still consume a slot.
+  </p>
+  <p>
+    A single <code>asyncio.Lock</code> protects the deque so concurrent calls cannot double-book the same slot.
+    Combined with the per-endpoint semaphore (<code>Semaphore(1)</code> for /research), calls are serialised
+    and budget-gated before they ever reach the network.
+  </p>
+
+  <pre><code>Budget deque (capacity = 5, window = 30s):
+
+  [t=0.0, t=0.1, t=5.2, t=11.0, t=17.5]   &larr; 5/5 full
+   &uarr;                                          &uarr;
+   oldest (expires at t=30.0)                 newest
+
+  At t=24.0, a new call arrives:
+    &bull; Expire: nothing (oldest is 24s old, &lt; 30s window)
+    &bull; Check:  5/5 &rarr; full
+    &bull; Wait:   30.0 &minus; 24.0 = 6.0s
+    &bull; Print:  "Rate budget full, pacing for 6s..."
+    &bull; Sleep 6s, re-check, oldest expired &rarr; 4/5 &rarr; proceed</code></pre>
+</div>
+
+<!-- ============================================================ -->
+<h2>Scenario 1: Throttle Storm</h2>
+<p>
+  The LLM issues 3 parallel <code>research_topic</code> calls in a single turn.
+  Two slots are already consumed from earlier weather lookups in the same window,
+  leaving 3 slots remaining.
+</p>
+
+<div class="scenario">
+  <h3>User prompt: &ldquo;Compare solar energy, wind energy, and nuclear power&rdquo;</h3>
+  <p>LLM responds with 3 tool calls: <code>research_topic("solar energy")</code>, <code>research_topic("wind energy")</code>, <code>research_topic("nuclear power")</code>.</p>
+  <p>Budget state: 2 of 5 slots already used (from prior weather calls). <strong>3 slots remain.</strong></p>
+
+  <div class="cases">
+    <div class="case case-bad">
+      <h4>Case 1 &mdash; No Pacer</h4>
+      <p style="font-size: 0.85em; color: var(--ink-muted); margin-bottom: 0.65em;">
+        All 3 calls fire simultaneously. No client-side budget tracking.
+      </p>
+      <ul class="timeline">
+        <li><span class="ts">0.0s</span><span class="dot dot-fire"></span><strong>call_1</strong> ("solar energy") fires</li>
+        <li><span class="ts">0.0s</span><span class="dot dot-fire"></span><strong>call_2</strong> ("wind energy") fires</li>
+        <li><span class="ts">0.0s</span><span class="dot dot-fire"></span><strong>call_3</strong> ("nuclear power") fires</li>
+        <li><span class="ts">0.04s</span><span class="dot dot-ok"></span><strong>call_1</strong> accepted (slot 3 of 5)</li>
+        <li><span class="ts">0.04s</span><span class="dot dot-ok"></span><strong>call_2</strong> accepted (slot 4 of 5)</li>
+        <li><span class="ts">0.04s</span><span class="dot dot-ok"></span><strong>call_3</strong> accepted (slot 5 of 5)</li>
+        <li><span class="ts">5.2s</span><span class="dot dot-ok"></span>call_1 returns data &check;</li>
+        <li><span class="ts">6.8s</span><span class="dot dot-ok"></span>call_2 returns data &check;</li>
+        <li><span class="ts">7.5s</span><span class="dot dot-ok"></span>call_3 returns data &check;</li>
+      </ul>
+      <div class="outcome">
+        ~7.5&nbsp;s wall time. 3 API calls. All 3 succeed &mdash;
+        but the window is now at 5/5. The next call in the same window (weather or research) will be throttled.
+        No budget tracking means the client has no idea.
+      </div>
+    </div>
+
+    <div class="case case-good">
+      <h4>Case 2 &mdash; With Pacer</h4>
+      <p style="font-size: 0.85em; color: var(--ink-muted); margin-bottom: 0.65em;">
+        Semaphore(1) serialises calls. <code>wait_for_budget</code> gates each one.
+      </p>
+      <ul class="timeline">
+        <li><span class="ts">0.0s</span><span class="dot dot-fire"></span>sem acquired &rarr; budget 3/5 &rarr; <strong>call_1</strong> fires</li>
+        <li><span class="ts">0.0s</span><span class="dot dot-wait"></span>call_2, call_3 wait for semaphore</li>
+        <li><span class="ts">5.2s</span><span class="dot dot-ok"></span>call_1 returns data &check; &mdash; sem released</li>
+        <li><span class="ts">5.2s</span><span class="dot dot-fire"></span>budget 4/5 &rarr; <strong>call_2</strong> fires</li>
+        <li><span class="ts">11.0s</span><span class="dot dot-ok"></span>call_2 returns data &check; &mdash; sem released</li>
+        <li><span class="ts">11.0s</span><span class="dot dot-fire"></span>budget 5/5 &rarr; <strong>call_3</strong> fires</li>
+        <li><span class="ts">17.5s</span><span class="dot dot-ok"></span>call_3 returns data &check;</li>
+      </ul>
+      <div class="outcome">
+        ~17.5&nbsp;s wall time (slower). 3 API calls, 0 throttles.
+        Budget is at 5/5 but the client <em>knows</em> it &mdash; the next call will wait for the window
+        to slide instead of hitting a surprise throttle.
+      </div>
+    </div>
+  </div>
+
+  <div class="finding" style="margin-top: 1.25em;">
+    <strong>Trade-off:</strong> with only 3 slots remaining, both cases succeed. The pacer is slower (serial vs parallel)
+    but leaves the client with an accurate budget. The real difference emerges when the window is tighter &mdash; see Scenario&nbsp;2.
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>Scenario 2: Burst Into a Nearly Full Window</h2>
+<p>
+  The LLM issues 3 parallel <code>research_topic</code> calls, but 4 slots are already consumed
+  from earlier weather lookups. Only 1 slot remains in the window.
+</p>
+
+<div class="scenario">
+  <h3>User prompt: &ldquo;Compare solar energy, wind energy, and nuclear power&rdquo;</h3>
+  <p>LLM responds with 3 tool calls. Budget state: 4 of 5 slots used. <strong>1 slot remains.</strong>
+     Prior 4 calls were made 5&ndash;10&nbsp;s ago (they expire in 20&ndash;25&nbsp;s).</p>
+
+  <div class="cases">
+    <div class="case case-bad">
+      <h4>Case 1 &mdash; No Pacer</h4>
+      <p style="font-size: 0.85em; color: var(--ink-muted); margin-bottom: 0.65em;">
+        All 3 fire simultaneously. Only 1 gets a slot; 2 are throttled.
+      </p>
+      <ul class="timeline">
+        <li><span class="ts">0.0s</span><span class="dot dot-fire"></span>call_1, call_2, call_3 all fire simultaneously</li>
+        <li><span class="ts">0.04s</span><span class="dot dot-ok"></span><strong>call_1</strong> accepted (slot 5 of 5)</li>
+        <li><span class="ts">0.05s</span><span class="dot dot-fail"></span><strong>call_2</strong> throttled &mdash; <code>retry_after: 25</code></li>
+        <li><span class="ts">0.05s</span><span class="dot dot-fail"></span><strong>call_3</strong> throttled &mdash; <code>retry_after: 25</code></li>
+        <li><span class="ts">6s</span><span class="dot dot-ok"></span>call_1 returns data &check;</li>
+        <li><span class="ts">6s</span><span class="dot dot-user"></span>User sees call_1 result but is still waiting for calls 2 and 3&hellip;</li>
+        <li><span class="ts">26s</span><span class="dot dot-wait"></span>call_2 retries &rarr; window slid, prior calls expired &rarr; accepted</li>
+        <li><span class="ts">26s</span><span class="dot dot-wait"></span>call_3 retries &rarr; accepted</li>
+        <li><span class="ts">32s</span><span class="dot dot-ok"></span>call_2 returns data &check;</li>
+        <li><span class="ts">33s</span><span class="dot dot-ok"></span>call_3 returns data &check;</li>
+      </ul>
+      <div class="outcome">
+        ~33&nbsp;s wall time. 5 API requests (2 wasted on throttle responses). All 3 eventually succeed,
+        but the user waited ~26&nbsp;s for a retry cycle, seeing &ldquo;Rate-limited, retrying in 26s&hellip;&rdquo;
+        with no advance warning.
+      </div>
+    </div>
+
+    <div class="case case-good">
+      <h4>Case 2 &mdash; With Pacer</h4>
+      <p style="font-size: 0.85em; color: var(--ink-muted); margin-bottom: 0.65em;">
+        Semaphore(1) serialises calls. <code>wait_for_budget</code> gates each one.
+      </p>
+      <ul class="timeline">
+        <li><span class="ts">0.0s</span><span class="dot dot-fire"></span>sem acquired &rarr; budget 5/5 &rarr; <strong>call_1</strong> fires</li>
+        <li><span class="ts">0.0s</span><span class="dot dot-wait"></span>calls 2, 3 wait for semaphore</li>
+        <li><span class="ts">6s</span><span class="dot dot-ok"></span>call_1 returns data &check; &mdash; sem released</li>
+        <li><span class="ts">6s</span><span class="dot dot-wait"></span>budget still 5/5 (prior entries not yet expired) &mdash; must wait</li>
+        <li><span class="ts">6s</span><span class="dot dot-wait"></span>CLI: &ldquo;Rate budget full, pacing for 14s&hellip;&rdquo;</li>
+        <li><span class="ts">20s</span><span class="dot dot-fire"></span>oldest entry expires &rarr; budget 4/5 &rarr; <strong>call_2</strong> fires</li>
+        <li><span class="ts">26s</span><span class="dot dot-ok"></span>call_2 returns data &check; &mdash; sem released</li>
+        <li><span class="ts">26s</span><span class="dot dot-fire"></span>more entries expired &rarr; budget 3/5 &rarr; <strong>call_3</strong> fires</li>
+        <li><span class="ts">32s</span><span class="dot dot-ok"></span>call_3 returns data &check;</li>
+      </ul>
+      <div class="outcome">
+        ~32&nbsp;s wall time (comparable). But only 3 API requests &mdash; zero wasted on throttle.
+        The user sees &ldquo;pacing for 14s&rdquo; up front instead of a surprise &ldquo;Rate-limited, retrying&rdquo; midway through.
+      </div>
+    </div>
+  </div>
+
+  <div class="finding" style="margin-top: 1.25em;">
+    <strong>Key insight:</strong> the total wait is similar in both cases because the underlying constraint is the same
+    (the window must slide before more calls can go through). The difference is <em>when</em> the user learns about the
+    wait: the pacer tells you up front (&ldquo;pacing for 14s&rdquo;), while the no-pacer path wastes 2 API requests
+    discovering the limit reactively. With higher call counts, the reactive retries also compete with each other for
+    slots, amplifying the delay.
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>Scenario 3: Mid-Flight Cancellation</h2>
+<p>
+  The user presses Ctrl+C during a research call (common because /research takes 3&ndash;8&nbsp;s).
+  The cancelled call still consumed a server throttle slot. The question is: does the client
+  know about that consumed slot when the next call happens?
+</p>
+
+<div class="scenario">
+  <h3>User asks &ldquo;Research quantum computing&rdquo;, then presses Ctrl+C at 2&nbsp;s, then asks a new question</h3>
+  <p>Budget state: 4 of 5 slots already used. <strong>1 slot remains.</strong></p>
+
+  <div class="cases">
+    <div class="case case-bad">
+      <h4>Case 1 &mdash; No Pacer</h4>
+      <p style="font-size: 0.85em; color: var(--ink-muted); margin-bottom: 0.65em;">
+        Client has no budget tracking. Cancelled call's slot is invisible.
+      </p>
+      <ul class="timeline">
+        <li><span class="ts">0.0s</span><span class="dot dot-fire"></span><strong>research("quantum computing")</strong> fires (server slot 5 of 5)</li>
+        <li><span class="ts">2.0s</span><span class="dot dot-cancel"></span>User presses Ctrl+C &rarr; <code>CancelledError</code></li>
+        <li><span class="ts">2.0s</span><span class="dot dot-user"></span>CLI prints cancellation message</li>
+        <li><span class="ts">2.1s</span><span class="dot dot-user"></span>User asks: &ldquo;Research solar energy instead&rdquo;</li>
+        <li><span class="ts">2.1s</span><span class="dot dot-fire"></span><strong>research("solar energy")</strong> fires immediately</li>
+        <li><span class="ts">2.15s</span><span class="dot dot-fail"></span>Server returns <code>{status:"throttled", retry_after:27}</code></li>
+        <li><span class="ts">2.15s</span><span class="dot dot-wait"></span>Client sleeps 28&nbsp;s (retry_after + 1)</li>
+        <li><span class="ts">30s</span><span class="dot dot-fire"></span>Retry &rarr; succeeds</li>
+        <li><span class="ts">36s</span><span class="dot dot-ok"></span>Returns data &check;</li>
+      </ul>
+      <div class="outcome">
+        ~34&nbsp;s wasted on a surprise throttle. The user sees &ldquo;Rate-limited, retrying in 28s&hellip;&rdquo;
+        and thinks: &ldquo;Why? I only made one call!&rdquo; The cancelled call's slot was invisible to the client.
+      </div>
+    </div>
+
+    <div class="case case-good">
+      <h4>Case 2 &mdash; With Pacer</h4>
+      <p style="font-size: 0.85em; color: var(--ink-muted); margin-bottom: 0.65em;">
+        <code>wait_for_budget</code> records the slot <em>before</em> the HTTP call begins.
+      </p>
+      <ul class="timeline">
+        <li><span class="ts">0.0s</span><span class="dot dot-wait"></span><code>wait_for_budget</code> records slot (budget: 5/5)</li>
+        <li><span class="ts">0.0s</span><span class="dot dot-fire"></span><strong>research("quantum computing")</strong> fires</li>
+        <li><span class="ts">2.0s</span><span class="dot dot-cancel"></span>User presses Ctrl+C &rarr; <code>CancelledError</code></li>
+        <li><span class="ts">2.0s</span><span class="dot dot-user"></span>CLI: &ldquo;Cancelled. The interrupted API call may still count against the rate limit.&rdquo;</li>
+        <li><span class="ts">2.1s</span><span class="dot dot-user"></span>User asks: &ldquo;Research solar energy instead&rdquo;</li>
+        <li><span class="ts">2.1s</span><span class="dot dot-wait"></span><code>wait_for_budget</code>: 5/5 used &rarr; must wait ~28&nbsp;s</li>
+        <li><span class="ts">2.1s</span><span class="dot dot-wait"></span>CLI: &ldquo;Rate budget full, pacing for 28s&hellip;&rdquo;</li>
+        <li><span class="ts">30s</span><span class="dot dot-fire"></span>Window slides &rarr; budget opens &rarr; call fires</li>
+        <li><span class="ts">36s</span><span class="dot dot-ok"></span>Returns data &check; (no throttle, no retry)</li>
+      </ul>
+      <div class="outcome">
+        Same ~34&nbsp;s total wait &mdash; but the wait is <em>proactive</em> (client-side pacing) instead of
+        <em>reactive</em> (server throttle + retry). The user sees &ldquo;pacing for 28s&rdquo; immediately, not a
+        surprise throttle. And the call succeeds on the first attempt &mdash; no wasted API request.
+      </div>
+    </div>
+  </div>
+
+  <div class="finding" style="margin-top: 1.25em;">
+    <strong>Why it works:</strong> <code>wait_for_budget</code> appends the current timestamp to the deque <em>before</em>
+    the HTTP call begins (<code>pacing.py</code>, line&nbsp;40). If the call is cancelled mid-flight, the slot is
+    already recorded in the client-side budget, matching the server's behaviour. This is the key design
+    decision that makes cancellation safe.
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>Scenario 4: Server-Side Timeout</h2>
+<p>
+  The user asks to research a garbage or pathological input. The server hangs for ~15&nbsp;s
+  and returns <code>{}</code> (empty JSON, HTTP 200). This is not a client timeout &mdash; the server
+  genuinely spent 15&nbsp;s and returned nothing useful.
+</p>
+
+<div class="scenario">
+  <h3>User asks &ldquo;Research a&rdquo; (single character &mdash; triggers server timeout)</h3>
+  <p>Budget state: 0 of 5 used. <strong>5 slots available.</strong></p>
+
+  <div class="cases">
+    <div class="case case-bad">
+      <h4>Case 1 &mdash; No Pacer, No Parser</h4>
+      <p style="font-size: 0.85em; color: var(--ink-muted); margin-bottom: 0.65em;">
+        Raw HTTP call with no empty-body detection.
+      </p>
+      <ul class="timeline">
+        <li><span class="ts">0.0s</span><span class="dot dot-fire"></span><strong>research("a")</strong> fires</li>
+        <li><span class="ts">15.0s</span><span class="dot dot-ok"></span>HTTP 200 returns &mdash; body is <code>{}</code></li>
+        <li><span class="ts">15.0s</span><span class="dot dot-fail"></span>Empty dict passed to LLM as tool result</li>
+        <li><span class="ts">15.0s</span><span class="dot dot-fail"></span>LLM receives no data &mdash; hallucinates or gives confused answer</li>
+      </ul>
+      <div class="outcome">
+        15&nbsp;s of silence, then the LLM gets an empty tool result. It has no signal that
+        a timeout occurred. It may hallucinate research content, tell the user nothing was found,
+        or produce a confused response. The consumed slot is also invisible to the client.
+      </div>
+    </div>
+
+    <div class="case case-good">
+      <h4>Case 2 &mdash; With Full Stack</h4>
+      <p style="font-size: 0.85em; color: var(--ink-muted); margin-bottom: 0.65em;">
+        Pacer tracks the slot. Parser detects empty body. Prompt instructs LLM.
+      </p>
+      <ul class="timeline">
+        <li><span class="ts">0.0s</span><span class="dot dot-wait"></span><code>wait_for_budget</code> records slot (budget: 1/5)</li>
+        <li><span class="ts">0.0s</span><span class="dot dot-fire"></span><strong>research("a")</strong> fires</li>
+        <li><span class="ts">0.0s</span><span class="dot dot-user"></span>CLI: &ldquo;Researching a&hellip; (Ctrl+C to cancel)&rdquo;</li>
+        <li><span class="ts">15.0s</span><span class="dot dot-ok"></span>HTTP 200 returns &mdash; body is <code>{}</code></li>
+        <li><span class="ts">15.0s</span><span class="dot dot-wait"></span><code>parsers/research.py</code>: <code>if not data</code> &rarr; <code>ResearchResult(kind="timeout")</code></li>
+        <li><span class="ts">15.0s</span><span class="dot dot-ok"></span>Enveloped as <code>{"untrusted": true, "data": {"kind":"timeout", "message":"..."}}</code></li>
+        <li><span class="ts">15.0s</span><span class="dot dot-ok"></span>LLM follows prompt rule: &ldquo;tell the user and suggest retrying&rdquo;</li>
+      </ul>
+      <div class="outcome">
+        Same 15&nbsp;s wait (unavoidable &mdash; it's a server-side timeout), but the outcome is clean:
+        the parser converts <code>{}</code> into a structured <code>kind="timeout"</code> signal,
+        the prompt instructs the LLM to explain it, and the pacer correctly tracked the consumed slot.
+        User sees: &ldquo;The research timed out. Try a more specific topic or try again.&rdquo;
+      </div>
+    </div>
+  </div>
+
+  <div class="finding" style="margin-top: 1.25em;">
+    <strong>Note:</strong> the pacer cannot prevent server-side timeouts &mdash; that is a server behaviour, not a rate-limit issue.
+    But the pacer still matters here: the 15&nbsp;s call consumed a slot, and the pacer tracked it. Without it, the
+    client would not know that 1 of 5 slots is now gone for the remainder of the window. The parser and prompt layers
+    handle the user-facing recovery.
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>Summary</h2>
+<table>
+  <thead>
+    <tr><th>Scenario</th><th>Without Pacer</th><th>With Pacer</th><th>Key Benefit</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>1. Throttle storm</strong><br/>(3 calls, 3 slots left)</td>
+      <td>All succeed but window exhausted with no tracking</td>
+      <td>All succeed, budget accurately at 5/5</td>
+      <td>Accurate budget prevents surprise throttles on the next turn</td>
+    </tr>
+    <tr>
+      <td><strong>2. Burst into full window</strong><br/>(3 calls, 1 slot left)</td>
+      <td>1 accepted, 2 throttled &rarr; 5 API requests, ~33&nbsp;s</td>
+      <td>All 3 succeed, 3 API requests, ~32&nbsp;s</td>
+      <td>Proactive wait instead of reactive retry; zero wasted requests</td>
+    </tr>
+    <tr>
+      <td><strong>3. Cancellation</strong><br/>(Ctrl+C at 2&nbsp;s)</td>
+      <td>Next call throttled (surprise), 1 wasted API request</td>
+      <td>Next call proactively waits, 0 wasted requests</td>
+      <td>Pre-recorded slot keeps budget accurate after cancel</td>
+    </tr>
+    <tr>
+      <td><strong>4. Server timeout</strong><br/>(<code>{}</code> after 15&nbsp;s)</td>
+      <td>LLM gets empty data, hallucinates or is confused</td>
+      <td>Parser converts to <code>kind="timeout"</code>, LLM explains cleanly</td>
+      <td>Structured error signal + slot tracking</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="source-data">
+  <h2 style="margin-top: 0; border: none; padding: 0;">Code References</h2>
+  <p>
+    <code>pacing.py</code> &mdash; <code>wait_for_budget()</code> (proactive pacer) and <code>bounded_execute()</code> (semaphore + pacer + dispatch).
+    <code>agent.py</code> &mdash; <code>stream_turn()</code> creates per-endpoint semaphores and dispatches through <code>bounded_execute</code>.
+    <code>elyos_client.py</code> &mdash; <code>_call_api()</code> handles throttle retry and client-side timeout.
+    <code>parsers/research.py</code> &mdash; <code>parse_research()</code> detects empty bodies, cached data, and truncation.
+    <code>cli_chat.py</code> &mdash; SIGINT handler cancels the task and warns the user.
+    <code>config.yaml</code> &mdash; research: <code>max_concurrent: 1</code>, <code>timeout_s: 20</code>, <code>max_timeout_retries: 1</code>;
+    rate_limit: <code>max_requests_per_window: 5</code>, <code>window_s: 30</code>, <code>max_throttle_retries: 2</code>.
+  </p>
+</div>
+
+</div>
+
+</body>
+</html>
