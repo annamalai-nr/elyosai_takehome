@@ -2,89 +2,422 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>/weather — Consolidated Probe Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;0,6..72,700;1,6..72,400&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  body { font-family: system-ui, sans-serif; max-width: 900px; margin: 2em auto; line-height: 1.6; color: #222; }
-  h1 { border-bottom: 2px solid #333; padding-bottom: 0.3em; }
-  h2 { margin-top: 2em; border-bottom: 1px solid #ccc; padding-bottom: 0.2em; }
-  h3 { margin-top: 1.5em; }
-  table { border-collapse: collapse; width: 100%; margin: 1em 0; }
-  th, td { border: 1px solid #ccc; padding: 0.4em 0.8em; text-align: left; font-size: 0.9em; }
-  th { background: #f5f5f5; }
-  code { background: #f0f0f0; padding: 0.15em 0.3em; border-radius: 3px; font-size: 0.9em; }
-  pre { background: #f5f5f5; padding: 1em; overflow-x: auto; border-radius: 4px; }
-  .finding { background: #fffde7; border-left: 3px solid #f9a825; padding: 0.5em 1em; margin: 1em 0; }
-  .note { background: #e8f5e9; border-left: 3px solid #43a047; padding: 0.5em 1em; margin: 1em 0; }
+  :root {
+    --bg: #faf9f6;
+    --surface: #ffffff;
+    --ink: #1c1917;
+    --ink-secondary: #57534e;
+    --ink-muted: #78716c;
+    --border: #e7e5e4;
+    --border-strong: #d6d3d1;
+    --accent: #b45309;
+    --accent-soft: #fef3c7;
+    --accent-border: #f59e0b;
+    --major: #991b1b;
+    --major-bg: #fef2f2;
+    --major-border: #fca5a5;
+    --minor: #4338ca;
+    --minor-bg: #eef2ff;
+    --minor-border: #a5b4fc;
+    --green: #166534;
+    --green-bg: #f0fdf4;
+    --green-border: #86efac;
+    --code-bg: #f5f5f4;
+    --pre-bg: #1c1917;
+    --pre-text: #e7e5e4;
+    --pre-key: #fbbf24;
+    --pre-str: #86efac;
+    --heading-font: 'Newsreader', Georgia, serif;
+    --body-font: 'Outfit', system-ui, sans-serif;
+    --mono-font: 'JetBrains Mono', 'Cascadia Code', monospace;
+    --shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(28, 25, 23, 0.07), 0 2px 4px -2px rgba(28, 25, 23, 0.05);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--body-font);
+    font-weight: 400;
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--ink);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .container {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 3em 2em 6em;
+  }
+
+  /* ── Header ── */
+  .report-header {
+    padding-bottom: 2em;
+    margin-bottom: 2.5em;
+    border-bottom: 1px solid var(--border);
+  }
+  .report-header .endpoint {
+    font-family: var(--mono-font);
+    font-size: 0.8em;
+    font-weight: 500;
+    color: var(--accent);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 0.5em;
+  }
+  .report-header h1 {
+    font-family: var(--heading-font);
+    font-size: 2.4em;
+    font-weight: 700;
+    line-height: 1.15;
+    color: var(--ink);
+    margin-bottom: 0.5em;
+  }
+  .report-header .subtitle {
+    font-size: 0.92em;
+    color: var(--ink-secondary);
+    line-height: 1.65;
+  }
+  .report-header .subtitle code {
+    font-size: 0.88em;
+  }
+
+  /* ── Section headings ── */
+  h2 {
+    font-family: var(--heading-font);
+    font-size: 1.5em;
+    font-weight: 600;
+    color: var(--ink);
+    margin-top: 3em;
+    margin-bottom: 0.75em;
+    padding-bottom: 0.35em;
+    border-bottom: 1px solid var(--border);
+  }
+  h2:first-of-type { margin-top: 0; }
+
+  h3 {
+    font-family: var(--heading-font);
+    font-size: 1.15em;
+    font-weight: 600;
+    color: var(--ink);
+    margin-top: 1.75em;
+    margin-bottom: 0.5em;
+  }
+
+  /* ── Prose ── */
+  p {
+    margin-bottom: 1em;
+    color: var(--ink-secondary);
+  }
+  p strong { color: var(--ink); }
+  li { color: var(--ink-secondary); }
+  li strong { color: var(--ink); }
+
+  ul, ol { margin: 0.75em 0 1.25em 1.5em; }
+  li { margin-bottom: 0.5em; }
+  li + li { margin-top: 0; }
+
+  /* ── Inline code ── */
+  code {
+    font-family: var(--mono-font);
+    font-size: 0.82em;
+    font-weight: 400;
+    background: var(--code-bg);
+    color: var(--ink);
+    padding: 0.15em 0.4em;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+
+  /* ── Code blocks ── */
+  pre {
+    font-family: var(--mono-font);
+    font-size: 0.82em;
+    line-height: 1.65;
+    background: var(--pre-bg);
+    color: var(--pre-text);
+    padding: 1.25em 1.5em;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 1em 0 1.5em;
+    box-shadow: var(--shadow-md);
+  }
+  pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    color: inherit;
+    font-size: inherit;
+  }
+
+  /* ── Tables ── */
+  table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 1em 0 1.5em;
+    background: var(--surface);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    border: none;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  th {
+    font-family: var(--body-font);
+    font-size: 0.78em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-muted);
+    background: var(--bg);
+    padding: 0.75em 1em;
+    text-align: left;
+    border-bottom: 1px solid var(--border-strong);
+  }
+  td {
+    font-size: 0.9em;
+    padding: 0.7em 1em;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: rgba(180, 83, 9, 0.02); }
+
+  /* ── Callout boxes ── */
+  .finding {
+    background: var(--accent-soft);
+    border-left: 4px solid var(--accent-border);
+    padding: 1em 1.25em;
+    margin: 1.25em 0;
+    border-radius: 0 6px 6px 0;
+    font-size: 0.93em;
+  }
+  .finding strong { color: var(--accent); }
+
+  .note {
+    background: var(--green-bg);
+    border-left: 4px solid var(--green-border);
+    padding: 1em 1.25em;
+    margin: 1.25em 0;
+    border-radius: 0 6px 6px 0;
+    font-size: 0.93em;
+  }
+  .note strong { color: var(--green); }
+
+  /* ── Severity badges ── */
+  .badge {
+    display: inline-block;
+    font-family: var(--body-font);
+    font-size: 0.7em;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 0.2em 0.6em;
+    border-radius: 4px;
+    vertical-align: middle;
+    position: relative;
+    top: -1px;
+  }
+  .badge-major {
+    background: var(--major-bg);
+    color: var(--major);
+    border: 1px solid var(--major-border);
+  }
+  .badge-minor {
+    background: var(--minor-bg);
+    color: var(--minor);
+    border: 1px solid var(--minor-border);
+  }
+
+  /* ── Quirks list ── */
+  .quirks-list {
+    list-style: none;
+    padding: 0;
+    margin: 0.75em 0 1.25em;
+    counter-reset: quirk;
+  }
+  .quirks-list li {
+    position: relative;
+    padding: 0.85em 0.5em 0.85em 0.5em;
+    margin-bottom: 0;
+    background: transparent;
+    border-bottom: 1px solid var(--border);
+  }
+  .quirks-list li:last-child { border-bottom: none; }
+  .quirks-list .quirk-id {
+    font-family: var(--mono-font);
+    font-size: 0.78em;
+    font-weight: 500;
+    color: var(--accent);
+    margin-right: 0.5em;
+  }
+
+  /* ── Handling table tweaks ── */
+  .handling-table td:first-child {
+    font-family: var(--mono-font);
+    font-size: 0.82em;
+    font-weight: 500;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+  .handling-table td:nth-child(3) { white-space: nowrap; }
+  .handling-table em {
+    display: block;
+    margin-top: 0.35em;
+    font-size: 0.92em;
+    color: var(--ink-muted);
+  }
+
+  /* ── TL;DR styling ── */
+  .tldr {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    border-radius: 0;
+    padding: 1.25em 1.5em;
+    margin: 1em 0 1.5em;
+  }
+  .tldr ol { margin: 0; padding-left: 1.25em; }
+  .tldr li { margin-bottom: 0.65em; }
+  .tldr li:last-child { margin-bottom: 0; }
+
+  /* ── Source data footer ── */
+  .source-data {
+    margin-top: 3em;
+    padding-top: 1.5em;
+    border-top: 1px solid var(--border);
+    font-size: 0.88em;
+    color: var(--ink-muted);
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 640px) {
+    .container { padding: 1.5em 1em 4em; }
+    .report-header h1 { font-size: 1.8em; }
+    h2 { font-size: 1.3em; }
+    table { font-size: 0.85em; }
+    .handling-table td:first-child { white-space: normal; }
+  }
 </style>
 </head>
 <body>
 
-<h1>/weather &mdash; Consolidated Probe Report</h1>
-<p>
-  Consolidates findings from <code>weather_probe_report.html</code> (32 probes, 2026-05-17),
-  <code>weather_cancellation_report.html</code> (10 calls, 2026-05-17), and the shared-bucket
-  findings from <code>shared_rate_limit_bucket_report.html</code> (2026-05-19).
-  Originals archived in <code>_archive/</code>.
-</p>
+<div class="container">
+
+<header class="report-header">
+  <div class="endpoint">/weather endpoint</div>
+  <h1>Consolidated Probe Report</h1>
+  <p class="subtitle">
+    Consolidates findings from <code>weather_probe_report.html</code> (32 logical probes, 38 actual API calls due to throttle retries, 2026-05-17),
+    <code>weather_cancellation_report.html</code> (8 API calls + 2 cancelled + 1 verdict log line, 2026-05-17), and the shared-bucket
+    findings from <code>shared_rate_limit_bucket_report.html</code> (2026-05-19).
+    Originals archived in <code>_archive/</code>.
+  </p>
+</header>
 
 <h2>Quirks</h2>
-<ol>
-  <li><strong>Throttle is HTTP 200, not 429.</strong> Rate limiting is hidden inside the response body as <code>{"status":"throttled"}</code>. Standard HTTP status code conventions are not used.</li>
-  <li><strong>Two success schemas, randomly assigned.</strong> The same city can return Shape&nbsp;A (flat) or Shape&nbsp;B (multi-observation array) on any call. Not city-locked, not deterministic. ~10&ndash;15% of calls return Shape&nbsp;B.</li>
-  <li><strong>Silent fuzzy matching.</strong> Mars&rarr;Marseille, &#x4eac;&#x90fd;&rarr;&#x4eac;&#x90fd;&#x5e02;. The API resolves to a real city without signalling that it changed the input. The response <code>location</code> field differs from the request, but only if you compare.</li>
-  <li><strong>Fabrication for fictional cities.</strong> Atlantis returns fabricated weather data with no error. The API invents plausible-looking numbers for non-existent locations.</li>
-  <li><strong>Cancelled calls still consume a throttle slot.</strong> The server processes the request on arrival. Client-side cancellation (timeout or <code>asyncio.task.cancel()</code>) does not free the slot.</li>
-  <li><strong>Shared rate-limit bucket with /research.</strong> Both endpoints draw from the same ~5-per-30&nbsp;s window. A weather-heavy turn can starve a subsequent research call.</li>
-  <li><strong>Mixed casing in Shape&nbsp;B conditions.</strong> "Overcast" (capitalised) vs "light rain" (lowercase) in the same response array.</li>
-  <li><strong>Aggressive caching.</strong> Repeated identical queries return bit-identical bodies (same SHA). Contrast with /research which generates fresh content each time.</li>
+<ol class="quirks-list">
+  <li>
+    <span class="quirk-id">WQ1</span> <span class="badge badge-major">Major</span>
+    <strong>Throttle is HTTP 200, not 429.</strong>
+    Rate limiting is hidden inside the response body as <code>{"status":"throttled"}</code>. Standard HTTP status code conventions are not used.
+  </li>
+  <li>
+    <span class="quirk-id">WQ2</span> <span class="badge badge-major">Major</span>
+    <strong>Conflicting observations for the same city.</strong>
+    In the probe run, ~10&ndash;15% of successful calls returned Shape&nbsp;B, which contains multiple contradictory weather readings for the same location (e.g. 12.5&deg;C Overcast vs 11.8&deg;C light rain for Paris). The API provides no indication of which reading is authoritative. The structural difference (flat Shape&nbsp;A vs array Shape&nbsp;B) is secondary &mdash; the real issue is ambiguous, conflicting data.
+  </li>
+  <li>
+    <span class="quirk-id">WQ3</span> <span class="badge badge-major">Major</span>
+    <strong>Silent fuzzy matching.</strong>
+    Mars&rarr;Marseille, India&rarr;New Delhi, UK&rarr;London, &#x4eac;&#x90fd;&rarr;&#x4eac;&#x90fd;&#x5e02;. The API resolves to a real city without signalling that it changed the input. The response <code>location</code> field differs from the request, but only if you compare.
+  </li>
+  <li>
+    <span class="quirk-id">WQ4</span> <span class="badge badge-major">Major</span>
+    <strong>Fabrication for fictional cities.</strong>
+    Atlantis returns fabricated weather data with no error. The API invents plausible-looking numbers for non-existent locations.
+  </li>
+  <li>
+    <span class="quirk-id">WQ5</span> <span class="badge badge-major">Major</span>
+    <strong>Cancelled calls still consume a throttle slot.</strong>
+    The server processes the request on arrival. Client-side cancellation (timeout or <code>asyncio.task.cancel()</code>) does not free the slot.
+  </li>
+  <li>
+    <span class="quirk-id">WQ6</span> <span class="badge badge-major">Major</span>
+    <strong>Shared rate-limit bucket with /research.</strong>
+    Both endpoints draw from the same ~5-per-30&nbsp;s window. A weather-heavy turn can starve a subsequent research call.
+  </li>
+  <li>
+    <span class="quirk-id">WQ7</span> <span class="badge badge-minor">Minor</span>
+    <strong>Mixed casing in Shape&nbsp;B conditions.</strong>
+    "Overcast" (capitalised) vs "light rain" (lowercase) in the same response array.
+  </li>
 </ol>
 
 <h2>TL;DR</h2>
+<div class="tldr">
 <ol>
   <li><strong>Rate limit is HTTP 200 with body envelope, not 429.</strong> After ~5 successful calls per ~30&nbsp;s window, the response is <code>{"status":"throttled","retry_after_seconds":N,"data":null}</code>.</li>
-  <li><strong>Two success schemas; both must be handled.</strong> Shape&nbsp;A (flat: <code>temperature_c</code>, <code>condition</code>, <code>humidity</code>) and Shape&nbsp;B (multi-observation <code>conditions</code> array). Either can appear for any city on any call.</li>
-  <li><strong>Fuzzy matching and fabrication.</strong> Mars&rarr;Marseille, &#x4eac;&#x90fd;&rarr;&#x4eac;&#x90fd;&#x5e02;, Atlantis&rarr;fabricated weather. No way to detect mismatch from response alone.</li>
+  <li><strong>Shape&nbsp;B returns conflicting observations for the same city.</strong> Shape&nbsp;A (flat) and Shape&nbsp;B (multi-observation <code>conditions</code> array) can appear for any city on any call. The structural difference is solved by normalisation, but Shape&nbsp;B contains contradictory readings (different temperatures, conditions) with no way to determine which is authoritative.</li>
+  <li><strong>Fuzzy matching and fabrication.</strong> Mars&rarr;Marseille, &#x4eac;&#x90fd;&rarr;&#x4eac;&#x90fd;&#x5e02;, Atlantis&rarr;fabricated weather. No explicit mismatch flag; the client must compare <code>requested_location</code> against <code>returned_location</code>.</li>
   <li><strong>Cancelled calls still consume a throttle slot.</strong> Server processes the request immediately; client cancellation frees nothing.</li>
   <li><strong>Shared rate-limit bucket.</strong> /weather and /research share the same ~5-per-30&nbsp;s window (confirmed by interleaved probes).</li>
 </ol>
+</div>
 
 <h2>Response Variants (7 observed)</h2>
 <table>
-  <tr><th>Variant</th><th>Status</th><th>Example</th><th>Trigger</th></tr>
-  <tr><td>A &mdash; Flat single</td><td>200</td><td><code>{location:"London", temperature_c:14.0, condition:"Partly cloudy", humidity:67}</code></td><td>Most real-city queries</td></tr>
-  <tr><td>B &mdash; Multi-observation</td><td>200</td><td><code>{location:"Paris", conditions:[...], note:"Multiple conditions..."}</code></td><td>~10&ndash;15% of successful calls, random</td></tr>
-  <tr><td>Throttle envelope</td><td>200</td><td><code>{status:"throttled", retry_after_seconds:29, data:null}</code></td><td>After 5 successful calls per ~30&nbsp;s</td></tr>
-  <tr><td>404 not found</td><td>404</td><td><code>{error:"Location \"\" not found"}</code></td><td>Empty location or very long input (5000 chars)</td></tr>
-  <tr><td>422 validation</td><td>422</td><td>FastAPI default envelope</td><td>Missing or wrong param name</td></tr>
-  <tr><td>401 unauthorised</td><td>401</td><td><code>{error:"Invalid or missing API key"}</code></td><td>No key or wrong key</td></tr>
-  <tr><td>405 method not allowed</td><td>405</td><td><code>{detail:"Method Not Allowed"}</code></td><td>OPTIONS request</td></tr>
+  <thead>
+    <tr><th>Variant</th><th>Status</th><th>Example</th><th>Trigger</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>A &mdash; Flat single</td><td>200</td><td><code>{location:"London", temperature_c:14.0, condition:"Partly cloudy", humidity:67}</code></td><td>Most real-city queries</td></tr>
+    <tr><td>B &mdash; Multi-observation</td><td>200</td><td><code>{location:"Paris", conditions:[...], note:"Multiple conditions..."}</code></td><td>~10&ndash;15% of successful calls in probe run, random</td></tr>
+    <tr><td>Throttle envelope</td><td>200</td><td><code>{status:"throttled", retry_after_seconds:29, data:null}</code></td><td>After 5 successful calls per ~30&nbsp;s</td></tr>
+    <tr><td>404 not found</td><td>404</td><td><code>{error:"Location \"\" not found"}</code></td><td>Empty location or very long input (5000 chars)</td></tr>
+    <tr><td>422 validation</td><td>422</td><td>FastAPI default envelope</td><td>Missing or wrong param name</td></tr>
+    <tr><td>401 unauthorised</td><td>401</td><td><code>{error:"Invalid or missing API key"}</code></td><td>No key or wrong key</td></tr>
+    <tr><td>405 method not allowed</td><td>405</td><td><code>{detail:"Method Not Allowed"}</code></td><td>OPTIONS request</td></tr>
+  </tbody>
 </table>
 
 <h2>Schema Variation (Shape A vs Shape B)</h2>
-<p>Both shapes can appear for any city on any call &mdash; not city-locked. Shape&nbsp;B carries two conflicting observations with mixed condition casing ("Overcast" vs "light rain").</p>
+<p>Both shapes can appear for any city on any call &mdash; not city-locked, not deterministic. The structural difference (flat vs array) is a parsing problem solved by normalisation. The deeper issue is that Shape&nbsp;B returns <strong>multiple contradictory weather readings for the same location</strong> &mdash; different temperatures, different conditions, different humidity values &mdash; with no indication of which is authoritative or why they differ.</p>
+
 <h3>Shape A (flat)</h3>
-<pre>{
+<pre><code>{
   "location": "London",
   "temperature_c": 14.0,
   "condition": "Partly cloudy",
   "humidity": 67
-}</pre>
+}</code></pre>
+
 <h3>Shape B (multi-observation)</h3>
-<pre>{
+<pre><code>{
   "location": "Paris",
   "conditions": [
     {"temperature_c": 12.5, "condition": "Overcast", "humidity": 82},
     {"temperature_c": 11.8, "condition": "light rain", "humidity": 90}
   ],
   "note": "Multiple conditions reported for this location"
-}</pre>
+}</code></pre>
 
 <h2>Throttle Behaviour</h2>
 <ul>
   <li>~5 successful 200s per ~30&nbsp;s sliding window, then 6th returns throttle envelope.</li>
   <li><code>retry_after_seconds</code> starts at ~29 and decrements as wall-clock time passes within the window.</li>
-  <li>Error responses (401/404/405/422) never replaced by throttle envelopes &mdash; error path short-circuits.</li>
-  <li>After sleeping <code>retry_after_seconds + 1</code>, the same call succeeds. Confirmed across 6 backoff retries: 0 calls gave up.</li>
+  <li>Error responses (401/404/405/422) are never replaced by a throttle envelope. Even when the rate-limit budget is exhausted, an invalid request (wrong key, missing param, empty location) still returns its normal error code. The error path short-circuits before the rate limiter, so error responses do not consume a throttle slot either.</li>
+  <li>After sleeping <code>retry_after_seconds + 1</code> seconds, the same call succeeds on the next attempt. Confirmed across 6 backoff retries during the probe run: every throttled call eventually succeeded, and 0 calls gave up. This means a simple retry loop with the server-provided wait time is sufficient &mdash; no exponential backoff or jitter needed for a single-user CLI.</li>
 </ul>
 
 <h2>Shared Rate-Limit Bucket</h2>
@@ -95,25 +428,57 @@
   consumed all 5 slots, and the next /weather was throttled.
 </div>
 
-<h2>Fuzzy Matching &amp; Fabrication</h2>
+<h2>Fuzzy Matching</h2>
+<p>The API silently resolves ambiguous or partial input to a real city. The response <code>location</code> field contains the resolved name, not the original input &mdash; but nothing else in the response signals that a substitution occurred. The only way to detect it is to compare request input against response <code>location</code>.</p>
+
+<h3>Acceptable fuzzy matches</h3>
 <table>
-  <tr><th>Input</th><th>Returned Location</th><th>Notes</th></tr>
-  <tr><td>Mars</td><td>Marseille</td><td>Fuzzy match</td></tr>
-  <tr><td>&#x4eac;&#x90fd;</td><td>&#x4eac;&#x90fd;&#x5e02;</td><td>Unicode fuzzy match</td></tr>
-  <tr><td>Atlantis</td><td>Atlantis</td><td>Fabricated weather for fictional city</td></tr>
+  <thead>
+    <tr><th>Input</th><th>Returned Location</th><th>Notes</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>&#x4eac;&#x90fd;</td><td>&#x4eac;&#x90fd;&#x5e02;</td><td>Unicode input resolved to official city name (Kyoto &rarr; Kyoto-shi)</td></tr>
+    <tr><td>India</td><td>New Delhi</td><td>Country name resolved to capital city</td></tr>
+    <tr><td>UK</td><td>London</td><td>Country abbreviation resolved to capital city</td></tr>
+  </tbody>
+</table>
+
+<h3>Questionable fuzzy matches</h3>
+<table>
+  <thead>
+    <tr><th>Input</th><th>Returned Location</th><th>Notes</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Mars</td><td>Marseille</td><td>Partial string resolved to nearest real city &mdash; user likely did not mean Marseille</td></tr>
+  </tbody>
+</table>
+
+<h2>Fabrication</h2>
+<p>When the API cannot fuzzy-match to a real city, it does not return an error. Instead it returns fabricated weather data with plausible-looking numbers for a location that does not exist.</p>
+<table>
+  <thead>
+    <tr><th>Input</th><th>Returned Location</th><th>Notes</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Atlantis</td><td>Atlantis</td><td>Fictional city; API returned fabricated temperature, condition, and humidity with no error flag or indication that the data is invented</td></tr>
+  </tbody>
 </table>
 
 <h2>Input Handling</h2>
 <table>
-  <tr><th>Input</th><th>Behaviour</th></tr>
-  <tr><td>Empty string</td><td>404</td></tr>
-  <tr><td>5000 chars</td><td>404 with full input echoed</td></tr>
-  <tr><td>LONDON / london</td><td>Normalised to "London" (case folded)</td></tr>
-  <tr><td>"&nbsp;&nbsp;London&nbsp;&nbsp;"</td><td>Whitespace stripped</td></tr>
-  <tr><td>"London, UK"</td><td>Comma suffix ignored &rarr; London</td></tr>
-  <tr><td>Extra param (foo=bar)</td><td>Ignored</td></tr>
-  <tr><td>Duplicate param</td><td>Last value wins</td></tr>
-  <tr><td>Missing param</td><td>422</td></tr>
+  <thead>
+    <tr><th>Input</th><th>Behaviour</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Empty string</td><td>404</td></tr>
+    <tr><td>5000 chars</td><td>404 with full input echoed</td></tr>
+    <tr><td>LONDON / london</td><td>Normalised to "London" (case folded)</td></tr>
+    <tr><td>"&nbsp;&nbsp;London&nbsp;&nbsp;"</td><td>Whitespace stripped</td></tr>
+    <tr><td>"London, UK"</td><td>Comma suffix ignored &rarr; London</td></tr>
+    <tr><td>Extra param (foo=bar)</td><td>Ignored</td></tr>
+    <tr><td>Duplicate param</td><td>Last value wins</td></tr>
+    <tr><td>Missing param</td><td>422</td></tr>
+  </tbody>
 </table>
 
 <h2>Cancellation Findings</h2>
@@ -124,28 +489,63 @@
 <ul>
   <li><code>asyncio.CancelledError</code> raised cleanly &mdash; no zombie tasks, no leaks.</li>
   <li><code>httpx.AsyncClient</code> pool survives cancellation &mdash; same client usable for next request.</li>
-  <li>Aggressive caching: 4 consecutive London calls returned bit-identical bodies.</li>
+  <li>Repeated identical queries within the same probe run returned byte-for-byte identical response bodies (same SHA-256 hash). However, the API does not explicitly mark responses as cached (unlike /research which uses a <code>cached: true</code> flag), so this may reflect deterministic computation rather than server-side caching.</li>
 </ul>
 
 <h2>Concurrency</h2>
 <ul>
   <li>5 parallel calls to <code>/weather?location=London</code>: 3 succeeded immediately, 2 throttled, retried after 30&nbsp;s, all 5 ultimately succeeded.</li>
   <li>Confirms true server-side parallelism; concurrent fan-out consumes slots.</li>
-  <li>All 5 returned bit-identical bodies.</li>
+  <li>All 5 returned byte-for-byte identical 84-byte bodies (SHA-256 <code>ce136498&hellip;</code>), indicating deterministic responses for the same input within a time window.</li>
 </ul>
 
 <h2>Latency Profile</h2>
 <table>
-  <tr><th>Call type</th><th>Range</th><th>Notes</th></tr>
-  <tr><td>Cold start</td><td>~3.1 s</td><td>Cloud Run cold start</td></tr>
-  <tr><td>Warm valid</td><td>0.107&ndash;0.170 s</td><td>p50 &asymp; 0.12 s</td></tr>
-  <tr><td>Concurrent (5 parallel)</td><td>0.148&ndash;0.203 s</td><td>Slightly elevated</td></tr>
-  <tr><td>Error responses</td><td>0.033&ndash;0.037 s</td><td>Skip weather generation</td></tr>
-  <tr><td>Throttled</td><td>~0.04 s</td><td>Plus backoff wait</td></tr>
+  <thead>
+    <tr><th>Call type</th><th>Range</th><th>Notes</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Cold start</td><td>~3.1 s</td><td>Cloud Run cold start</td></tr>
+    <tr><td>Warm valid</td><td>0.107&ndash;0.170 s</td><td>p50 &asymp; 0.12 s</td></tr>
+    <tr><td>Concurrent (5 parallel)</td><td>0.148&ndash;0.203 s</td><td>Slightly elevated</td></tr>
+    <tr><td>Error responses</td><td>0.033&ndash;0.037 s</td><td>Skip weather generation</td></tr>
+    <tr><td>Throttled</td><td>~0.04 s</td><td>Plus backoff wait</td></tr>
+  </tbody>
 </table>
 
 <h2>Prompt Injection</h2>
-<p>No prompt-injection content found in any of 32 response bodies.</p>
+<p>
+  A prompt-injection payload was previously discovered at the API root (<code>/</code>), so
+  the concern was whether similar content could be embedded in <code>/weather</code> responses.
+  Because /weather returns structured data (temperature, condition, humidity) rather than
+  free-text summaries, the risk model here is <em>response-embedded injection</em>: the API
+  quietly slipping instructional text into a JSON field that the chat app later passes into
+  an LLM prompt.
+</p>
+<p><strong>Approach:</strong> all 38 retained Run 2 response bodies (32 logical probes + 6 throttled-first retry bodies) were scanned against 8 heuristic patterns:</p>
+<ol>
+  <li>HTML comments (<code>&lt;!--&hellip;--&gt;</code>)</li>
+  <li>Override-instruction phrases ("ignore all previous instructions" and variants)</li>
+  <li>AI self-references ("if you are an LLM&hellip;")</li>
+  <li>Known seed markers from the <code>/</code> root injection ("banana", "please add a comment", "found via api")</li>
+  <li>Zero-width and bidirectional-override Unicode characters</li>
+  <li>Roleplay markers ("act as&hellip;", "from now on&hellip;", "pretend that&hellip;")</li>
+  <li>System-prompt markers ("system:", "instruction:", "important:")</li>
+  <li>Imperative-at-reader phrases ("you must", "please add", "please reply")</li>
+</ol>
+<p>
+  <strong>Result: zero heuristic hits across all 38 retained response bodies.</strong>
+  Every response contained only the expected structured fields (<code>location</code>,
+  <code>temperature_c</code>, <code>condition</code>, <code>humidity</code> for Shape&nbsp;A;
+  the <code>conditions</code> array for Shape&nbsp;B). No instructional text, no hidden
+  markers, no Unicode tricks.
+</p>
+<p>
+  <strong>Conclusion:</strong> the prompt-injection content at <code>/</code> is a one-off
+  Easter egg for LLM-assisted candidates and does not propagate to the <code>/weather</code>
+  endpoint. The chat app still envelopes all tool responses as defence-in-depth, but there
+  is no active threat in the weather response bodies.
+</p>
 
 <h2>Errors</h2>
 <ul>
@@ -154,12 +554,154 @@
   <li>All bypass throttle budget.</li>
 </ul>
 
-<h2>Source Data</h2>
-<p>
-  42 API calls total (32 main probes + 10 cancellation probes).
-  Raw logs: <code>backend/outputs/probes/weather/weather_probe_log.jsonl</code>.
-  Original reports archived in <code>_archive/</code>.
-</p>
+<div class="source-data">
+  <h2 style="margin-top: 0; border: none; padding: 0;">Source Data</h2>
+  <p>
+    32 logical main probes produced 38 actual API calls due to throttle retries.
+    Cancellation probing added 8 API calls, 2 cancelled requests, and 1 verdict log line.
+    Raw logs: <code>backend/outputs/probes/weather/weather_probe_log.jsonl</code> and <code>weather_cancel_log.jsonl</code>.
+    Original reports archived in <code>_archive/</code>.
+  </p>
+</div>
+
+<h2>Quirk Handling in the Chat App</h2>
+<p>How each quirk listed above is handled by the chat application code.</p>
+<table class="handling-table">
+  <thead>
+    <tr>
+      <th>Quirk</th>
+      <th>Name</th>
+      <th>Severity</th>
+      <th>How it is handled</th>
+      <th>Example</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>WQ1</td>
+      <td>Throttle is HTTP&nbsp;200, not 429</td>
+      <td><span class="badge badge-major">Major</span></td>
+      <td>
+        <code>elyos_client.py</code> inspects every 200 response body for <code>"status":&nbsp;"throttled"</code>
+        (line&nbsp;68). When detected, it parses <code>retry_after_seconds</code> via <code>_retry_after()</code>,
+        sleeps <code>retry_after + 1</code>&nbsp;s, and retries up to <code>max_throttle_retries</code> (2) times.
+        The user sees <em>"Rate-limited, retrying in Ns&hellip;"</em> on the CLI. If retries are exhausted,
+        a <code>throttle_exhausted</code> error dict is returned and the LLM explains the failure.
+        Proactive pacing in <code>pacing.py</code> also prevents most throttles by tracking a client-side
+        sliding window (<code>wait_for_budget</code>) and delaying calls before they hit the server limit.
+      </td>
+      <td>
+        Server returns <code>{"status":"throttled","retry_after_seconds":29,"data":null}</code>.
+        <em>Client prints "Rate-limited, retrying in 30s&hellip;", sleeps 30&nbsp;s, retries, and the next attempt succeeds.</em>
+      </td>
+    </tr>
+    <tr>
+      <td>WQ2</td>
+      <td>Conflicting observations for the same city</td>
+      <td><span class="badge badge-major">Major</span></td>
+      <td>
+        Two layers. <strong>Parser layer:</strong> <code>parsers/weather.py</code> normalises both shapes
+        into a single <code>NormalisedWeather</code> Pydantic model. Shape&nbsp;A produces one
+        <code>WeatherObservation</code>; Shape&nbsp;B produces multiple. The LLM always receives
+        the same schema. <strong>Prompt layer:</strong> the system prompt instructs the LLM to present
+        all observations when multiple exist &mdash; do not average them, do not pick one, do not
+        collapse them. State that the API returned conflicting readings and that no single reading
+        should be treated as definitive.
+      </td>
+      <td>
+        Shape&nbsp;B returns 12.5&deg;C Overcast and 11.8&deg;C light rain for Paris.
+        <em>LLM responds: "The API returned two conflicting readings for Paris: 12.5&deg;C and overcast, vs 11.8&deg;C with light rain. I can't say which is definitive."</em>
+      </td>
+    </tr>
+    <tr>
+      <td>WQ3</td>
+      <td>Silent fuzzy matching</td>
+      <td><span class="badge badge-major">Major</span></td>
+      <td>
+        <code>parsers/weather.py</code> captures both <code>requested_location</code> (what the user asked for)
+        and <code>returned_location</code> (what the API resolved to) in <code>NormalisedWeather</code>.
+        The system prompt (<code>prompts.py</code>, weather_rules) instructs the LLM: <em>"When
+        requested_location and returned_location differ, tell the user about the mismatch."</em>
+        This ensures the user knows "Mars" was resolved to "Marseille."
+      </td>
+      <td>
+        Acceptable: user asks for "India", API returns <code>"location":"New Delhi"</code>.
+        <em>LLM responds: "The API resolved 'India' to New Delhi. Here's the weather for New Delhi&hellip;"</em><br/>
+        Questionable: user asks for "Mars", API returns <code>"location":"Marseille"</code>.
+        <em>LLM responds: "The weather API interpreted 'Mars' as Marseille, which probably isn't what you meant."</em>
+      </td>
+    </tr>
+    <tr>
+      <td>WQ4</td>
+      <td>Fabrication for fictional cities</td>
+      <td><span class="badge badge-major">Major</span></td>
+      <td>
+        The API provides no error flag, confidence score, or indication that a location is fictional.
+        Handled at the prompt level: the system prompt instructs the LLM to caveat obvious fictitious
+        or mythological locations such as Atlantis, Gotham, or Mordor. This works because the LLM
+        recognises these as non-real places, even though the API returns plausible-looking data for them.
+      </td>
+      <td>
+        User asks for "Atlantis". API returns plausible weather data.
+        <em>LLM responds: "Atlantis could be a fictional place, so take this with a large grain of salt."</em>
+        User asks for "Gotham". API returns <code>"location":"Gotham Bridge"</code>.
+        <em>LLM responds: "Gotham is likely a fictional place, so take this with a grain of salt" and also surfaces the location mismatch.</em>
+      </td>
+    </tr>
+    <tr>
+      <td>WQ5</td>
+      <td>Cancelled calls consume a throttle slot</td>
+      <td><span class="badge badge-major">Major</span></td>
+      <td>
+        Two layers of handling. First, <code>cli_chat.py</code> warns the user on cancellation:
+        <em>"Cancelled. The interrupted API call may still count against the rate limit."</em>
+        Second, the client-side pacing budget (<code>pacing.py</code>) remains accurate because
+        <code>wait_for_budget</code> records the timestamp <em>before</em> the HTTP call begins.
+        If the call is cancelled mid-flight, the slot is already consumed in the client-side
+        budget, matching the server's behaviour.
+      </td>
+      <td>
+        User presses Ctrl+C during a weather lookup. The CLI prints the cancellation warning.
+        <em>The pacing budget already counted that slot, so the next call correctly waits if the window is at capacity &mdash; no double-count, no wasted slot.</em>
+      </td>
+    </tr>
+    <tr>
+      <td>WQ6</td>
+      <td>Shared rate-limit bucket with /research</td>
+      <td><span class="badge badge-major">Major</span></td>
+      <td>
+        <code>pacing.py</code> uses a single shared budget key (<code>"api"</code>) for all endpoints.
+        Both <code>get_weather</code> and <code>research_topic</code> pass through the same
+        <code>wait_for_budget</code> with one deque and one lock. The <code>config.yaml</code>
+        rate-limit block is at the API level, not per-endpoint. This mirrors the server's shared
+        bucket and prevents weather calls from starving research calls (or vice versa).
+      </td>
+      <td>
+        If 4 weather calls have been made in the current window, <code>wait_for_budget</code>
+        knows only 1 slot remains.
+        <em>The next call &mdash; whether weather or research &mdash; is allowed through. A 6th call of either type is delayed until the window slides.</em>
+      </td>
+    </tr>
+    <tr>
+      <td>WQ7</td>
+      <td>Mixed casing in Shape&nbsp;B conditions</td>
+      <td><span class="badge badge-minor">Minor</span></td>
+      <td>
+        Not explicitly handled in code. The parser passes condition strings through as-is
+        (&ldquo;Overcast&rdquo;, &ldquo;light rain&rdquo;) without normalising case. This is acceptable
+        because the LLM reads natural-language condition strings and naturally handles mixed casing
+        when summarising weather for the user.
+      </td>
+      <td>
+        Shape&nbsp;B arrives with <code>"condition":"Overcast"</code> and <code>"condition":"light rain"</code>.
+        Both are passed to the LLM as-is.
+        <em>The LLM responds: "Paris has overcast skies with light rain" &mdash; the casing difference is invisible in the final output.</em>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+</div>
 
 </body>
 </html>
