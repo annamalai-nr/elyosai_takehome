@@ -34,6 +34,29 @@ tests/
   test_history.py    7 history trimming tests
 ```
 
+## Request flow
+
+```text
+User input
+  └─ cli_chat.py (REPL)   or   ws_server.py (WebSocket)        — transport
+       └─ agent.stream_turn                                    — ReAct loop, ≤5 rounds
+            ├─ llm_client.stream_llm_turn                      — LiteLLM streaming + tool-call accumulation
+            │      (tools=TOOLS from tools/schemas.py)
+            └─ for each requested tool call (parallel, semaphore-bounded):
+                 └─ tools/dispatch.execute_tool_call           — routes by tool name
+                      └─ elyos_client.get_weather              — throttle + timeout retry
+                         elyos_client.research_topic
+                      └─ parsers.normalise_weather             — raw dict → Pydantic model
+                         parsers.parse_research
+                      └─ parsers.envelope                      — wrap as untrusted JSON
+                  → observation returned to agent → loop again
+```
+
+The optional `emit` callback threads through `stream_turn → stream_llm_turn → execute_tool_call`.
+When `None` (CLI), functions print to stdout. When provided by `ws_server.py`,
+they send JSON events to the frontend (see `ws_server.py` module docstring
+for the protocol).
+
 ## Key design decisions
 
 - **Untrusted data envelope**: All API responses are wrapped with

@@ -39,6 +39,17 @@ def _on_sigint() -> None:
 
 
 async def _async_main() -> None:
+    """REPL loop.
+
+    Each iteration: install SIGINT handler → prompt for input → run one
+    turn (cancellable by Ctrl+C, which calls `_on_sigint` to .cancel() the
+    task) → on CancelledError, roll back the in-flight user message and
+    optionally preserve a `[interrupted]` assistant message so history
+    records that the turn began → trim history → repeat.
+
+    SIGINT outside an active turn raises KeyboardInterrupt, breaks the
+    loop, and exits cleanly.
+    """
     global _turn_task
     cfg = load_config()
     messages: list[dict] = [{"role": "system", "content": SYSTEM_PROMPT}]

@@ -6,7 +6,7 @@ from typing import Any
 logging.getLogger("LiteLLM").setLevel(logging.ERROR)
 import litellm  # noqa: E402
 
-from backend.chat.models import LLMTurn, ToolCall
+from backend.chat.models import Emit, LLMTurn, ToolCall
 from backend.chat.tools import TOOLS
 
 litellm.callbacks = ["langsmith"]
@@ -38,7 +38,7 @@ def _accumulate_tool_call(tool_calls: dict[int, dict], tc_delta: Any) -> None:
         entry["args"] += tc_delta.function.arguments
 
 
-async def stream_llm_turn(cfg: dict, messages: list[dict], state: dict, emit=None) -> LLMTurn:
+async def stream_llm_turn(cfg: dict, messages: list[dict], state: dict, emit: Emit | None = None) -> LLMTurn:
     """Stream one LLM completion, printing content and accumulating tool calls."""
     model = cfg["llm"]["model_name"]
     log.debug("Calling LLM: model=%s messages=%d", model, len(messages))

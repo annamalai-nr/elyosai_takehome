@@ -87,11 +87,13 @@ def _endpoint_args(cfg: dict, endpoint_name: str) -> tuple[str, str, dict, int]:
 
 @traceable(run_type="tool", name="elyos_weather_call")
 async def get_weather(client: httpx.AsyncClient, cfg: dict, location: str) -> dict:
+    """GET /weather?location=...; routed through `_call_api` for throttle/timeout retry."""
     base_url, api_key, ep_cfg, max_throttle = _endpoint_args(cfg, "weather")
     return await _call_api(client, base_url, ep_cfg["path"], {"location": location}, api_key, ep_cfg, max_throttle)
 
 
 @traceable(run_type="tool", name="elyos_research_call")
 async def research_topic(client: httpx.AsyncClient, cfg: dict, topic: str) -> dict:
+    """GET /research?topic=...; routed through `_call_api` for throttle/timeout retry."""
     base_url, api_key, ep_cfg, max_throttle = _endpoint_args(cfg, "research")
     return await _call_api(client, base_url, ep_cfg["path"], {"topic": topic}, api_key, ep_cfg, max_throttle)

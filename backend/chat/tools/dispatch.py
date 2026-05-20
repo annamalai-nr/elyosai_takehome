@@ -6,7 +6,7 @@ import logging
 import httpx
 from langsmith import traceable
 
-from backend.chat.models import ToolCall
+from backend.chat.models import Emit, ToolCall
 from backend.chat.parsers import envelope, normalise_weather, parse_research
 from backend.chat.tools.elyos_client import get_weather, research_topic
 
@@ -18,7 +18,7 @@ def _dump(parsed) -> dict:
 
 
 @traceable(run_type="tool", name="execute_tool")
-async def execute_tool_call(client: httpx.AsyncClient, cfg: dict, call: ToolCall, emit=None) -> dict:
+async def execute_tool_call(client: httpx.AsyncClient, cfg: dict, call: ToolCall, emit: Emit | None = None) -> dict:
     """Execute a single tool call and return an OpenAI-format tool message."""
     try:
         args = json.loads(call.arguments)

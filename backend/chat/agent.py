@@ -8,7 +8,7 @@ import httpx
 from langsmith import traceable
 
 from backend.chat.llm_client import stream_llm_turn
-from backend.chat.models import ToolCall
+from backend.chat.models import Emit, ToolCall
 from backend.chat.tools.dispatch import execute_tool_call
 
 log = logging.getLogger(__name__)
@@ -23,8 +23,9 @@ async def _bounded_execute(
     client: httpx.AsyncClient,
     cfg: dict,
     tc: ToolCall,
-    emit,
+    emit: Emit | None,
 ) -> dict:
+    """Acquire the endpoint's semaphore, run one tool call, release."""
     async with sem:
         return await execute_tool_call(client, cfg, tc, emit=emit)
 
@@ -35,7 +36,7 @@ async def stream_turn(
     cfg: dict,
     messages: list[dict],
     state: dict,
-    emit=None,
+    emit: Emit | None = None,
 ) -> None:
     """ReAct loop: LLM turn -> tool execution -> observation -> repeat."""
     endpoints = cfg["elyos_api"]["endpoints"]

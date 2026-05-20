@@ -1,4 +1,27 @@
-"""WebSocket server — connects the frontend to the chat agent."""
+"""WebSocket server — connects the frontend to the chat agent.
+
+Listens on ws://localhost:8765. One `_handler` coroutine per connection;
+all per-connection state (messages, in-flight turn task) is local to that
+coroutine.
+
+Protocol
+--------
+Inbound (client → server), JSON object per message:
+
+    {"content": str}        — new user message; runs one turn
+    {"type": "cancel"}      — cancel the in-flight turn task, if any
+
+Outbound (server → client), JSON object per event. Events are emitted
+in time order; every turn ends with a `done` event:
+
+    {"type": "text",        "content": str}              — streamed LLM token
+    {"type": "tool_start",  "name": str, "args": dict}   — tool call initiated
+    {"type": "status",      "message": str}              — human-readable status
+    {"type": "tool_result", "name": str, "data": dict}   — parsed tool result
+    {"type": "error",       "message": str}              — turn failed
+    {"type": "cancelled"}                                — turn was cancelled
+    {"type": "done"}                                     — turn complete (always last)
+"""
 
 import asyncio
 import json
@@ -11,12 +34,14 @@ import websockets
 from backend.chat.agent import stream_turn
 from backend.chat.interfaces.cli_chat import _trim_history
 from backend.chat.load_config import load_config
+from backend.chat.models import Emit
 from backend.chat.prompts import SYSTEM_PROMPT
 
 log = logging.getLogger(__name__)
 
 
 async def _send(ws, event: dict) -> None:
+    """Serialise `event` and send it over the WebSocket."""
     await ws.send(json.dumps(event))
 
 
@@ -27,8 +52,16 @@ async def _run_turn(
     state: dict,
     max_hist: int,
     content: str,
-    emit,
+    emit: Emit,
 ) -> None:
+    """Run one turn end-to-end, with cancellation rollback.
+
+    On asyncio.CancelledError, removes the in-flight user message from
+    `messages` (so a cancelled turn does not corrupt subsequent rounds).
+    If partial text was already streamed, preserves a `[interrupted]`
+    assistant message so the conversation history records that the turn
+    began. Always emits `done` last, even on cancel or error.
+    """
     messages.append({"role": "user", "content": content})
     if max_hist:
         _trim_history(messages, max_hist)
@@ -50,6 +83,17 @@ async def _run_turn(
 
 
 async def _handler(ws):
+    """Per-connection handler.
+
+    Owns the WebSocket lifecycle: receives JSON messages, validates them,
+    runs at most one turn at a time, and forwards cancel requests to the
+    in-flight task. Each turn runs as an `asyncio.Task` so it can be
+    cancelled mid-flight when the client sends `{"type": "cancel"}`.
+
+    Invalid JSON, malformed messages, and a new user message while a turn
+    is already in flight all emit `{type: error}` + `{type: done}` and
+    continue serving the connection.
+    """
     cfg = load_config()
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     state = {"partial": ""}
@@ -93,6 +137,7 @@ async def _handler(ws):
 
 
 async def _serve():
+    """Bind localhost:8765 and serve `_handler` for the lifetime of the process."""
     log.info("WebSocket server on ws://localhost:8765")
     async with websockets.serve(_handler, "localhost", 8765):
         print("WebSocket server running on ws://localhost:8765")
@@ -101,5 +146,6 @@ async def _serve():
 
 
 def main():
+    """Entry point used by `python -m backend.chat --serve`."""
     logging.basicConfig(format="%(name)s %(levelname)s: %(message)s", level=logging.INFO)
     asyncio.run(_serve())
