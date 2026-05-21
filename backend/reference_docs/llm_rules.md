@@ -103,4 +103,3 @@ ticket/chat-service-specific blocks from Eugenix CP2 are not in scope.
 ## Scope Boundary
 
 - This file covers LLM and voice invocation mechanics only.
-- Product and assignment constraints belong in `project_context.md`.

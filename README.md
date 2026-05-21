@@ -8,40 +8,57 @@ Builds a CLI streaming chat application that calls two real-world APIs
 
 ```
 .
-├── api_quirks_analysis/              per-endpoint analysis (quirks + chat-app handling)
-│   ├── weather_quirks_report.html             /weather quirks + handling
-│   ├── research_quirks_report.html            /research quirks + handling
-│   ├── bounded_concurrency_quirks_report.html design-rationale essay
-│   └── _archive/                              raw per-probe reports (superseded)
+├── api_quirks_analysis/               per-endpoint quirk dossiers (HTML + PDF)
+│   ├── weather_quirks_report.*        /weather quirks + chat-app handling
+│   ├── research_quirks_report.*       /research quirks + chat-app handling
+│   └── bounded_concurrency_quirks_report.*  design-rationale essay
 │
-├── backend/chat/                      streaming CLI chat package
-│   ├── __main__.py                    python -m backend.chat (argparse)
-│   ├── config.yaml                    model selection + Elyos API config
-│   ├── config_reference.md            config.yaml field reference
-│   ├── paths.py                       package path constants
-│   ├── load_config.py                 config loader + validation
-│   ├── models.py                      Pydantic models (domain + LLM turn)
-│   ├── prompts.py                     system prompt
-│   ├── llm_client.py                  LiteLLM streaming adapter
-│   ├── agent.py                       ReAct loop with bounded concurrency
-│   ├── parsers/                       response parsers + JSON envelope
-│   │   ├── __init__.py                envelope() — untrusted data wrapper
-│   │   ├── weather.py                 /weather response normalization
-│   │   └── research.py               /research response normalization
-│   ├── tools/                         tool schemas + execution + Elyos API
-│   │   ├── schemas.py                 LLM tool schemas
-│   │   ├── dispatch.py                tool execution dispatch
-│   │   └── elyos_client.py            Elyos HTTP client with throttle/timeout retry
-│   ├── tests/                         self-tests (--validate)
-│   │   ├── runner.py                  test runner entry point
-│   │   ├── test_history.py            7 history trimming tests
-│   │   └── test_parsers.py            9 parser/envelope behavioral tests
-│   └── interfaces/
-│       ├── cli_chat.py                interactive REPL + SIGINT handling
-│       └── ws_server.py               WebSocket server for the web UI
+├── backend/
+│   ├── chat/                          streaming CLI chat package
+│   │   ├── __main__.py                python -m backend.chat (argparse)
+│   │   ├── config.yaml                model selection + Elyos API config
+│   │   ├── config_reference.md        config.yaml field reference
+│   │   ├── paths.py                   package path constants
+│   │   ├── load_config.py             config loader + validation
+│   │   ├── models.py                  Pydantic models (domain + LLM turn)
+│   │   ├── prompts.py                 system prompt
+│   │   ├── llm_client.py             LiteLLM streaming adapter
+│   │   ├── agent.py                   ReAct loop with bounded concurrency
+│   │   ├── parsers/                   response parsers + JSON envelope
+│   │   │   ├── __init__.py            envelope() — untrusted data wrapper
+│   │   │   ├── weather.py             /weather response normalization
+│   │   │   └── research.py            /research response normalization
+│   │   ├── tools/                     tool schemas + execution + Elyos API
+│   │   │   ├── schemas.py             LLM tool schemas
+│   │   │   ├── dispatch.py            tool execution dispatch
+│   │   │   └── elyos_client.py        HTTP client with throttle/timeout retry
+│   │   ├── tests/                     self-tests (--validate)
+│   │   │   ├── runner.py              test runner entry point
+│   │   │   ├── test_history.py        7 history trimming tests
+│   │   │   └── test_parsers.py        9 parser/envelope behavioral tests
+│   │   └── interfaces/
+│   │       ├── cli_chat.py            interactive REPL + SIGINT handling
+│   │       └── ws_server.py           WebSocket server for the web UI
+│   │
+│   ├── probes/                        standalone API probe scripts
+│   │   ├── probe_weather.py           /weather endpoint probes
+│   │   ├── probe_research.py          /research endpoint probes
+│   │   ├── probe_weather_cancellation.py
+│   │   └── probe_research_cancellation.py
+│   │
+│   ├── case_studies/                  decision logs and coverage audits
+│   └── reference_docs/                LLM rules, allowed models, prompting guide
 │
-└── frontend/
-    └── index.html                     web UI (connects to backend via WebSocket)
+├── frontend/
+│   └── index.html                     web UI (connects to backend via WebSocket)
+│
+├── presentation_prep/
+│   └── slides.html                    Loom presentation slide deck
+│
+├── north_stars.md                     coding conventions
+├── pyproject.toml                     Hatch build config + dependencies
+├── requirements.txt                   pip-installable dependency list
+└── restart_servers.sh                 restart backend + frontend dev servers
 ```
 
 ## Setup

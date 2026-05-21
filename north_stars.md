@@ -2,9 +2,6 @@
 
 This file contains code-only engineering rules for the Elyos take-home repo.
 
-Project-specific product, UX, and assignment-shape rules belong in
-`project_context.md`, not here.
-
 ## Reference Files
 
 - `backend/reference_docs/allowed_models.csv` is the allowlist for model names.
