@@ -255,21 +255,6 @@
   <div class="subtitle">Streaming Chat with Quirky APIs</div>
   <div class="divider"></div>
   <div class="author">Annamalai Narayanan</div>
-
-  <div class="title-hooks fragment fade-up">
-    <div class="title-hook">
-      <span class="hook-example">Mars &rarr; Marseille</span>
-      <span class="hook-label">Silent fuzzy matching</span>
-    </div>
-    <div class="title-hook">
-      <span class="hook-example">HTTP 200 { status: "throttled" }</span>
-      <span class="hook-label">Hidden rate limit</span>
-    </div>
-    <div class="title-hook">
-      <span class="hook-example">Atlantis &rarr; 22&deg;C, Partly cloudy</span>
-      <span class="hook-label">Fabricated weather</span>
-    </div>
-  </div>
 </section>
 
 <!-- ════════════════════════════════════════════════════════ -->
@@ -428,7 +413,47 @@
 </section>
 
 <!-- ════════════════════════════════════════════════════════ -->
-<!-- SLIDE 4: TRADE-OFF 1 — CODE vs PROMPT                  -->
+<!-- SLIDE 4: TRADE-OFF 1 — REACTIVE vs PROACTIVE            -->
+<!-- ════════════════════════════════════════════════════════ -->
+<section>
+  <span class="overline">Trade-offs</span>
+  <h2>Reactive Retry vs Proactive Pacing</h2>
+  <p>Shared rate-limit bucket: ~5 calls / 30s across both endpoints.</p>
+
+  <div class="tradeoff-grid">
+    <div class="tradeoff-col fragment fade-up">
+      <span class="badge badge-muted">Considered</span>
+      <h3>Proactive Pacer</h3>
+      <ul>
+        <li>Track call timestamps</li>
+        <li>Space requests evenly across window</li>
+        <li>Stay under budget preemptively</li>
+      </ul>
+      <div class="col-verdict" style="color: var(--major);">
+        Requires knowing exact window size and call budget &mdash; neither documented. If wrong, burns calls and gets throttled anyway.
+      </div>
+    </div>
+
+    <div class="tradeoff-col chosen fragment fade-up">
+      <span class="badge badge-green">Chosen</span>
+      <h3>Bounded Concurrency + Reactive Retry</h3>
+      <ul>
+        <li><code>asyncio.Semaphore</code> per endpoint</li>
+        <li><code>max_concurrent = 1</code> &mdash; serialise same-endpoint calls</li>
+        <li>On throttle: read <code>retry_after_seconds</code>, wait, retry</li>
+        <li>Server stays the source of truth</li>
+      </ul>
+      <div class="col-verdict">Does not prevent throttles &mdash; responds to them. Multi-city requests run sequentially.</div>
+    </div>
+  </div>
+
+  <div class="callout fragment fade-up">
+    <p><strong>Key insight:</strong> "I chose to be honest about what I don't know rather than pretend I do."</p>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- SLIDE 5: TRADE-OFF 2 — CODE vs PROMPT                   -->
 <!-- ════════════════════════════════════════════════════════ -->
 <section>
   <span class="overline">Trade-offs</span>
@@ -474,51 +499,11 @@
 </section>
 
 <!-- ════════════════════════════════════════════════════════ -->
-<!-- SLIDE 5: TRADE-OFF 2 — REACTIVE vs PROACTIVE            -->
-<!-- ════════════════════════════════════════════════════════ -->
-<section>
-  <span class="overline">Trade-offs</span>
-  <h2>Reactive Retry vs Proactive Pacing</h2>
-  <p>Shared rate-limit bucket: ~5 calls / 30s across both endpoints.</p>
-
-  <div class="tradeoff-grid">
-    <div class="tradeoff-col fragment fade-up">
-      <span class="badge badge-muted">Considered</span>
-      <h3>Proactive Pacer</h3>
-      <ul>
-        <li>Track call timestamps</li>
-        <li>Space requests evenly across window</li>
-        <li>Stay under budget preemptively</li>
-      </ul>
-      <div class="col-verdict" style="color: var(--major);">
-        Requires knowing exact window size and call budget &mdash; neither documented. If wrong, burns calls and gets throttled anyway.
-      </div>
-    </div>
-
-    <div class="tradeoff-col chosen fragment fade-up">
-      <span class="badge badge-green">Chosen</span>
-      <h3>Bounded Concurrency + Reactive Retry</h3>
-      <ul>
-        <li><code>asyncio.Semaphore</code> per endpoint</li>
-        <li><code>max_concurrent = 1</code> &mdash; serialise same-endpoint calls</li>
-        <li>On throttle: read <code>retry_after_seconds</code>, wait, retry</li>
-        <li>Server stays the source of truth</li>
-      </ul>
-      <div class="col-verdict">Does not prevent throttles &mdash; responds to them. Multi-city requests run sequentially.</div>
-    </div>
-  </div>
-
-  <div class="callout fragment fade-up">
-    <p><strong>Key insight:</strong> "I chose to be honest about what I don't know rather than pretend I do."</p>
-  </div>
-</section>
-
-<!-- ════════════════════════════════════════════════════════ -->
 <!-- SLIDE 6: META-HARNESS + CLOSING                         -->
 <!-- ════════════════════════════════════════════════════════ -->
 <section>
   <span class="overline">Self-Critique</span>
-  <h2>The Meta-Harness</h2>
+  <h2>The API Reconnaissance Meta-Harness</h2>
   <p>The probe &rarr; catalogue &rarr; policy &rarr; implement workflow is automatable &mdash; and directly relevant to Elyos.</p>
 
   <div class="meta-flow fragment fade-up">
