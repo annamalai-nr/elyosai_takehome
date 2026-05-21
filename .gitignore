@@ -71,3 +71,6 @@ CLAUDE.md
 presentation_prep/demo_inputs.txt
 presentation_prep/loom_video_script*.md
 
+# Local recording artifacts (Loom source clips)
+videos/
+

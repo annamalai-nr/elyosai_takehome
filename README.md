@@ -8,10 +8,10 @@ Builds a CLI streaming chat application that calls two real-world APIs
 
 ```
 .
-├── api_analysis/                      per-endpoint analysis (quirks + chat-app handling)
-│   ├── weather.html                           /weather quirks + handling
-│   ├── research.html                          /research quirks + handling
-│   ├── bounded_concurrency.html               design-rationale essay
+├── api_quirks_analysis/              per-endpoint analysis (quirks + chat-app handling)
+│   ├── weather_quirks_report.html             /weather quirks + handling
+│   ├── research_quirks_report.html            /research quirks + handling
+│   ├── bounded_concurrency_quirks_report.html design-rationale essay
 │   └── _archive/                              raw per-probe reports (superseded)
 │
 ├── backend/chat/                      streaming CLI chat package
@@ -126,7 +126,7 @@ unset or false, the callback is a no-op.
 | Phase | What | Status | Where to read |
 |---|---|---|---|
 | 0. Setup | conda env, `.env`, `pip install -e .` | Done | this README |
-| 1. Investigation | probe `/weather` + `/research`, document findings | Done | `api_analysis/*.html` |
+| 1. Investigation | probe `/weather` + `/research`, document findings | Done | `api_quirks_analysis/*_quirks_report.html` |
 | 2. Build | CLI streaming chat with tool calling | Done | `backend/chat/` |
 | 3. Harden | add handling for confirmed quirks + fix research hallucination | Done | `backend/chat/parsers/`, `backend/chat/prompts.py` |
 | 4. Loom | 10–15 min walkthrough | | take-home PDF §Part 2 |
