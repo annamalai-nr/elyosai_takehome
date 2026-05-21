@@ -12,6 +12,9 @@ langsmith
 # Data validation
 pydantic
 
+# WebSocket server
+websockets
+
 # Dev
 black
 flake8

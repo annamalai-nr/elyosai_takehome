@@ -1,1 +1,1 @@
-"""User-facing interfaces (CLI REPL)."""
+"""User-facing interfaces (CLI REPL, WebSocket server)."""
